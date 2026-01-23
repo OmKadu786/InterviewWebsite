@@ -3,27 +3,25 @@ from openai import AsyncOpenAI
 from dotenv import load_dotenv
 
 load_dotenv()
-
-# Using AsyncOpenAI for better performance in FastAPI
 client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-async def get_initial_greeting(resume_text, job_desc):
-    prompt = f"""
-    You are a professional interviewer. 
-    Candidate Resume: {resume_text}
-    Target Job Description: {job_desc}
+async def get_ai_response(resume_text, job_desc, chat_history):
+    system_prompt = f"""
+    You are a professional technical interviewer.
+    JOB: {job_desc}
+    RESUME: {resume_text}
     
-    Task: 
-    1. Introduce yourself briefly.
-    2. Acknowledge a specific highlight from the resume.
-    3. Ask one opening interview question to start the session.
+    STAGES:
+    1. Start with 1-3 intro questions.
+    2. Move to technical/non-technical questions based on the resume.
     
-    Keep the tone professional and the response concise (max 3-4 sentences).
+    RULES: Ask ONE question at a time. Keep responses under 3 sentences.
     """
+    
+    messages = [{"role": "system", "content": system_prompt}] + chat_history
     
     response = await client.chat.completions.create(
         model="gpt-4o-mini",
-        messages=[{"role": "system", "content": prompt}]
+        messages=messages
     )
-    
     return response.choices[0].message.content
