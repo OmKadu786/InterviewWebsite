@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 from services.pdf_service import extract_text_from_pdf
 from services.llm_service import get_ai_response 
 from services.tts_service import generate_audio
+from services.video_service import process_video_frame, Stabilizer
 
 load_dotenv()
 
@@ -73,7 +74,10 @@ async def interview_websocket(websocket: WebSocket):
         
         chat_history.append({"role": "assistant", "content": response_text})
         audio_bytes = generate_audio(response_text)
-        audio_b64 = base64.b64encode(audio_bytes).decode('utf-8')
+        if audio_bytes:
+            audio_b64 = base64.b64encode(audio_bytes).decode('utf-8')
+        else:
+            audio_b64 = None
         
         await websocket.send_json({
             "type": "ai_turn",
@@ -102,7 +106,10 @@ async def interview_websocket(websocket: WebSocket):
                 
                 # Generate and send audio response
                 audio_bytes = generate_audio(ai_reply)
-                audio_b64 = base64.b64encode(audio_bytes).decode('utf-8')
+                if audio_bytes:
+                    audio_b64 = base64.b64encode(audio_bytes).decode('utf-8')
+                else:
+                    audio_b64 = None
                 
                 await websocket.send_json({
                     "type": "ai_turn",
@@ -111,6 +118,21 @@ async def interview_websocket(websocket: WebSocket):
                 })
     except Exception as e:
         print(f"WebSocket closed or error: {e}")
+
+@app.websocket("/ws/video")
+async def video_websocket(websocket: WebSocket):
+    await websocket.accept()
+    stabilizer = Stabilizer()
+    
+    try:
+        while True:
+            data = await websocket.receive_text()
+            # data is expected to be a base64 string
+            result = process_video_frame(data, stabilizer)
+            if result:
+                await websocket.send_json(result)
+    except Exception as e:
+        print(f"Video WebSocket error: {e}")
 
 if __name__ == "__main__":
     import uvicorn
