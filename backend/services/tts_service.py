@@ -10,7 +10,8 @@ client = ElevenLabs(
 
 def generate_audio(text: str):
     try:
-        voice_id = os.getenv("VOICE_ID", "21m00Tcm4TlvDq8ikWAM") 
+        # Default to "Adam" (Standard Free Voice) instead of "Rachel" to avoid "Library Voice" restrictions on free tiers
+        voice_id = os.getenv("VOICE_ID", "pNInz6obpgDQGcFmaJgB") 
         
         # CHANGED: 'generate' is now 'text_to_speech.convert' in the new SDK
         audio_generator = client.text_to_speech.convert(
