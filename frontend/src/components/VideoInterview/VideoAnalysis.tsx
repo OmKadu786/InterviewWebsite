@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { Activity, Smile, Brain } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { API_ENDPOINTS, WS_ENDPOINTS } from '../../config/api';
 
 interface VideoAnalysisProps {
     onReady?: () => void;
 }
 
 export const VideoAnalysis: React.FC<VideoAnalysisProps> = ({ onReady }) => {
-    const [streamUrl] = useState('http://localhost:8000/api/stream');
+    const [streamUrl] = useState(API_ENDPOINTS.stream);
     const [elapsed, setElapsed] = useState(0);
     const [analysis, setAnalysis] = useState({
         focus: 0,
@@ -37,7 +38,7 @@ export const VideoAnalysis: React.FC<VideoAnalysisProps> = ({ onReady }) => {
     React.useEffect(() => {
         if (onReady) onReady();
         
-        const ws = new WebSocket('ws://localhost:8000/ws/metrics');
+        const ws = new WebSocket(WS_ENDPOINTS.metrics);
         
         ws.onmessage = (event) => {
             try {

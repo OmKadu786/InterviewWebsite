@@ -7,6 +7,7 @@ import { FileUpload } from './components/FileUpload';
 import { CandidateReport } from './components/Analytics/CandidateReport';
 import { Sparkles, Loader2, ArrowRight } from 'lucide-react';
 import { Hero } from './components/Home/Hero';
+import { API_ENDPOINTS } from './config/api';
 
 type ViewState = 'landing' | 'setup' | 'interview' | 'analytics';
 
@@ -28,7 +29,7 @@ function App() {
 
       const headers: Record<string, string> = {};
       
-      const response = await fetch('http://localhost:8000/upload-resume', {
+      const response = await fetch(API_ENDPOINTS.uploadResume, {
         method: 'POST',
         body: formData,
         headers: headers
@@ -47,7 +48,7 @@ function App() {
   const handleEndInterview = async () => {
     // Stop the webcam when ending the interview
     try {
-      await fetch('http://localhost:8000/api/stop-camera', {
+      await fetch(API_ENDPOINTS.stopCamera, {
         method: 'POST'
       });
     } catch (error) {

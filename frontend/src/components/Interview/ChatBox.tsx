@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Send, X, Mic, MicOff } from 'lucide-react';
 import { AudioPlayer } from './AudioPlayer';
+import { API_ENDPOINTS, WS_ENDPOINTS } from '../../config/api';
 
 interface Message {
   role: 'ai' | 'user';
@@ -26,7 +27,7 @@ export function ChatBox({ onEnd }: { onEnd: () => void }) {
   }, [messages, isTranscribing]);
 
   useEffect(() => {
-    const ws = new WebSocket('ws://localhost:8000/ws/interview');
+    const ws = new WebSocket(WS_ENDPOINTS.interview);
     socketRef.current = ws;
 
     ws.onopen = () => {
@@ -92,7 +93,7 @@ export function ChatBox({ onEnd }: { onEnd: () => void }) {
     formData.append('file', blob);
 
     try {
-      const res = await fetch('http://localhost:8000/transcribe', {
+      const res = await fetch(API_ENDPOINTS.transcribe, {
         method: 'POST',
         body: formData
       });

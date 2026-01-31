@@ -3,6 +3,7 @@
  * Displays comprehensive interview performance analytics with charts and AI feedback.
  */
 import { useState, useEffect } from 'react';
+import { API_ENDPOINTS } from '../../config/api';
 import {
   RadarChart,
   PolarGrid,
@@ -79,7 +80,7 @@ export function CandidateReport() {
 
   const fetchAnalytics = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/analytics');
+      const response = await fetch(API_ENDPOINTS.analytics);
       const data = await response.json();
       setAnalytics(data);
     } catch (error) {
@@ -92,7 +93,7 @@ export function CandidateReport() {
   const fetchFeedback = async () => {
     setLoadingFeedback(true);
     try {
-      const response = await fetch('http://localhost:8000/api/analytics/feedback', {
+      const response = await fetch(API_ENDPOINTS.analyticsFeedback, {
         method: 'POST'
       });
       const data = await response.json();
