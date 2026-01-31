@@ -124,6 +124,10 @@ export function ChatBox({ onEnd }: { onEnd: () => void }) {
           <div className={`w-2.5 h-2.5 rounded-full ${isConnected ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
           <span className="font-semibold text-sm">Live Transcript</span>
         </div>
+        <div className="flex items-center gap-2 px-2 py-1 bg-secondary/50 rounded-full">
+          <span className="text-xs text-muted-foreground">LLM:</span>
+          <span className="text-xs font-medium text-hirebyte-mint">GPT-4o mini</span>
+        </div>
       </div>
 
       <div className="flex flex-1 min-h-0">

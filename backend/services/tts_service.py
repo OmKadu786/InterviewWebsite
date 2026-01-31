@@ -11,7 +11,7 @@ client = ElevenLabs(
 def generate_audio(text: str):
     try:
         # Use the correct env var name
-        voice_id = os.getenv("ELEVENLABS_VOICE_ID", "CwhRBWXzGAHq8TQ4Fs17") 
+        voice_id = os.getenv("ELEVENLABS_VOICE_ID", "ZoiZ8fuDWInAcwPXaVeq") 
         
         # CHANGED: 'generate' is now 'text_to_speech.convert' in the new SDK
         audio_generator = client.text_to_speech.convert(

@@ -2,7 +2,13 @@ import React from 'react';
 import { useTheme } from '../../context/ThemeContext';
 import { Moon, Sun } from 'lucide-react';
 
-export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+interface LayoutProps {
+  children: React.ReactNode;
+  onDone?: () => void;
+  showDoneButton?: boolean;
+}
+
+export const Layout: React.FC<LayoutProps> = ({ children, onDone, showDoneButton = false }) => {
   const { theme, toggleTheme } = useTheme();
 
   return (
@@ -18,13 +24,22 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
           <span>HireByte</span>
         </a>
 
-        <div className="flex items-center gap-4">
+        {/* Right side buttons - opposite to HireByte logo */}
+        <div className="flex items-center gap-3">
+          {showDoneButton && onDone && (
+            <button
+              onClick={onDone}
+              className="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-full text-sm font-medium transition-colors border border-white/10 shadow-lg"
+            >
+              Done
+            </button>
+          )}
           <button
             onClick={toggleTheme}
-            className="p-2 rounded-full hover:bg-accent transition-colors"
+            className="p-2.5 rounded-full bg-gray-800 hover:bg-gray-700 text-white transition-colors border border-white/10 shadow-lg"
             title="Toggle theme"
           >
-            {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+            {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
           </button>
         </div>
       </header>

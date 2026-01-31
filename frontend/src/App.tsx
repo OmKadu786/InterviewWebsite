@@ -1,40 +1,14 @@
 import { useState } from 'react';
-import { ThemeProvider, useTheme } from './context/ThemeContext';
+import { ThemeProvider } from './context/ThemeContext';
 import { Layout } from './components/Layout/Layout';
 import { VideoAnalysis } from './components/VideoInterview/VideoAnalysis';
 import { ChatBox } from './components/Interview/ChatBox';
 import { FileUpload } from './components/FileUpload';
 import { CandidateReport } from './components/Analytics/CandidateReport';
-import { Sparkles, Loader2, ArrowRight, Moon, Sun, CheckCircle } from 'lucide-react';
+import { Sparkles, Loader2, ArrowRight } from 'lucide-react';
 import { Hero } from './components/Home/Hero';
 
 type ViewState = 'landing' | 'setup' | 'interview' | 'analytics';
-
-// Done button with theme toggle component
-const InterviewHeader = ({ onDone }: { onDone: () => void }) => {
-  const { theme, toggleTheme } = useTheme();
-  
-  return (
-    <div className="absolute top-4 right-4 z-50 flex items-center gap-3">
-      {/* Done Button */}
-      <button
-        onClick={onDone}
-        className="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-full text-sm font-medium transition-colors border border-white/10 shadow-lg"
-      >
-        Done
-      </button>
-      
-      {/* Dark/Light Toggle */}
-      <button
-        onClick={toggleTheme}
-        className="p-2.5 rounded-full bg-gray-800 hover:bg-gray-700 text-white transition-colors border border-white/10 shadow-lg"
-        title="Toggle theme"
-      >
-        {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-      </button>
-    </div>
-  );
-};
 
 function App() {
   const [view, setView] = useState<ViewState>('landing');
@@ -70,13 +44,21 @@ function App() {
     }
   };
 
-  const handleEndInterview = () => {
+  const handleEndInterview = async () => {
+    // Stop the webcam when ending the interview
+    try {
+      await fetch('http://localhost:8000/api/stop-camera', {
+        method: 'POST'
+      });
+    } catch (error) {
+      console.error('Error stopping camera:', error);
+    }
     setView('analytics');
   };
 
   return (
     <ThemeProvider>
-        <Layout>
+        <Layout onDone={handleEndInterview} showDoneButton={view === 'interview'}>
             {view === 'landing' && <Hero onStartConfirm={() => setView('setup')} />}
             
             {view === 'setup' && (
@@ -141,9 +123,6 @@ function App() {
 
             {view === 'interview' && (
                 <div className="h-[calc(100vh-4rem)] p-4 md:p-6 overflow-hidden relative">
-                    {/* Top Right: Done button + Theme toggle */}
-                    <InterviewHeader onDone={handleEndInterview} />
-                    
                     <div className="max-w-[1920px] mx-auto h-full grid grid-cols-1 lg:grid-cols-12 gap-6">
                         
                         {/* Left Panel: Context & Inputs */}
@@ -151,7 +130,7 @@ function App() {
                             <div className="mb-4">
                                 <h3 className="font-semibold text-lg flex items-center gap-2 mb-1">
                                     <Sparkles size={16} className="text-hirebyte-mint"/> 
-                                    Context
+                                    Interview Setup
                                 </h3>
                                 <p className="text-xs text-muted-foreground">Resume & Job Analysis</p>
                             </div>

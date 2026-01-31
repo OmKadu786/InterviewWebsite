@@ -35,11 +35,11 @@ interview_session = {
 async def lifespan(app: FastAPI):
     """Application lifespan manager."""
     global detector
-    print("🚀 HireByte Starting...")
+    print("[STARTING] HireByte Starting...")
     print("Initializing FaceDetector...")
     detector = FaceDetector()
     yield
-    print("🛑 HireByte Shutting down...")
+    print("[STOPPING] HireByte Shutting down...")
     if detector:
         detector.close_camera()
 
