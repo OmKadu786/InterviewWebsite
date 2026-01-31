@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Send, X, Mic, MicOff } from 'lucide-react';
+import { Send, X, Mic, MicOff, Loader2, Sparkles } from 'lucide-react';
 import { AudioPlayer } from './AudioPlayer';
 
 interface Message {
@@ -147,93 +147,99 @@ export function ChatBox({ onEnd }: { onEnd: () => void }) {
   };
 
   return (
-    <div className="flex flex-col h-full w-full bg-slate-900/50">
-      {/* Header */}
-      <div className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-800/50">
-        <div className="flex items-center space-x-3">
-          <div className={`w-2.5 h-2.5 rounded-full ${isConnected ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
-          <span className="text-slate-200 font-semibold text-sm">AI Interview Session</span>
+    <div className="flex flex-col h-full w-full bg-[#050505]/50 backdrop-blur-3xl">
+      {/* Header - Cleaner & Integrated Audio Visualizer */}
+      <div className="p-4 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <div className={`w-2.5 h-2.5 rounded-full ${isConnected ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-red-500'}`} />
+            {isConnected && <div className="absolute inset-0 bg-emerald-500 rounded-full animate-ping opacity-50" />}
+          </div>
+          <div className="flex flex-col">
+            <span className="text-gray-100 font-medium text-sm tracking-wide">AI Interviewer</span>
+            <span className="text-[10px] text-gray-500 font-medium uppercase tracking-wider">{isRecording ? "Listening..." : "Active"}</span>
+          </div>
         </div>
-        <button onClick={onEnd} className="hover:bg-slate-700/50 p-2 rounded-lg text-slate-400 hover:text-white transition-colors">
+
+        {/* Integrated Waveform Animation */}
+        <div className="flex-1 flex justify-center mx-4">
+          <AudioPlayer base64Audio={currentAudio} />
+        </div>
+
+        <button
+          onClick={onEnd}
+          className="hover:bg-red-500/10 p-2 rounded-lg text-gray-500 hover:text-red-400 transition-colors"
+          title="End Interview"
+        >
           <X size={18} />
         </button>
       </div>
 
-      <div className="flex flex-1 min-h-0 overflow-hidden">
-        {/* Left Panel: Audio Visualizer / Status */}
-        <div className="w-1/3 border-r border-slate-800 p-4 bg-slate-950/20 flex flex-col items-center justify-center gap-4">
-          <div className="scale-75 transform">
-            <AudioPlayer base64Audio={currentAudio} />
-          </div>
+      {/* Chat Area */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
+        <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-6 scroll-smooth custom-scrollbar">
+          {messages.length === 0 && (
+            <div className="flex flex-col items-center justify-center h-full text-gray-600 space-y-3 opacity-50">
+              <Sparkles size={24} />
+              <p className="text-sm">Say "Hello" to start</p>
+            </div>
+          )}
 
-          <div className="text-center space-y-1">
-            <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">
-              {isRecording ? "Listening" : isTranscribing ? "Processing" : "Standby"}
-            </p>
-            {isRecording && (
-              <div className="flex gap-1 justify-center h-3 items-end">
-                <div className="w-1 bg-red-500 animate-[bounce_1s_infinite] h-2"></div>
-                <div className="w-1 bg-red-500 animate-[bounce_1.2s_infinite] h-3"></div>
-                <div className="w-1 bg-red-500 animate-[bounce_0.8s_infinite] h-2"></div>
+          {messages.map((m, i) => (
+            <div key={i} className={`flex ${m.role === 'ai' ? 'justify-start' : 'justify-end'} group`}>
+              <div
+                className={`max-w-[85%] p-4 text-sm leading-relaxed shadow-sm transition-all duration-200 ${m.role === 'ai'
+                    ? 'bg-[#18181b] border border-white/5 text-gray-200 rounded-2xl rounded-tl-sm hover:border-white/10'
+                    : 'bg-indigo-600 text-white rounded-2xl rounded-tr-sm shadow-indigo-500/10'
+                  }`}
+              >
+                {m.text}
               </div>
-            )}
-          </div>
+            </div>
+          ))}
+
+          {isTranscribing && (
+            <div className="flex justify-end">
+              <div className="text-[10px] text-gray-400 animate-pulse bg-white/5 px-3 py-1.5 rounded-full flex items-center gap-2 border border-white/5">
+                <Loader2 className="w-3 h-3 animate-spin" />
+                Transcribing...
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Right Panel: Chat & Controls */}
-        <div className="flex-1 flex flex-col min-w-0">
-          <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 scroll-smooth">
-            {messages.map((m, i) => (
-              <div key={i} className={`flex ${m.role === 'ai' ? 'justify-start' : 'justify-end'}`}>
-                <div className={`p-3 rounded-2xl text-sm max-w-[90%] leading-relaxed ${m.role === 'ai'
-                    ? 'bg-slate-800 text-slate-200 rounded-tl-none'
-                    : 'bg-indigo-600 text-white rounded-tr-none'
-                  }`}>
-                  {m.text}
-                </div>
-              </div>
-            ))}
-            {isTranscribing && (
-              <div className="flex justify-end">
-                <div className="text-xs text-slate-400 animate-pulse bg-slate-800/40 px-3 py-1 rounded-full flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" />
-                  Transcribing...
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Input Area */}
-          <div className="p-3 bg-slate-800/30 border-t border-slate-800 flex items-center gap-3">
+        {/* Input Area - Floating aesthetic */}
+        <div className="p-4 pt-2">
+          <div className="bg-[#111] border border-white/10 rounded-2xl p-2 flex items-center gap-2 shadow-2xl shadow-black/50">
             {/* Mic Toggle Button */}
             <button
               onClick={toggleRecording}
               disabled={isTranscribing || !mediaStream}
-              className={`flex items-center justify-center w-12 h-12 rounded-xl transition-all duration-200 ${!isRecording
-                  ? 'bg-slate-800/80 text-red-500 hover:bg-slate-700/80 border border-slate-700' // Muted State (Red Icon)
-                  : 'bg-indigo-600 text-white hover:bg-indigo-500 shadow-lg shadow-indigo-500/20' // Unmuted State (Normal/Active)
-                } ${(!mediaStream || isTranscribing) ? 'opacity-50 cursor-not-allowed grayscale' : ''}`}
-              title={isRecording ? "Mute Microphone" : "Unmute Microphone"}
+              className={`flex items-center justify-center w-10 h-10 rounded-xl transition-all duration-300 ${!isRecording
+                ? 'hover:bg-white/5 text-gray-400 hover:text-white'
+                : 'bg-red-500/10 text-red-500 animate-pulse'
+                } ${(!mediaStream || isTranscribing) ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
-              {/* Logic: !isRecording = Muted = Red Slash. isRecording = Unmuted = Normal Mic */}
-              {!isRecording ? <MicOff size={22} /> : <Mic size={22} />}
+              {!isRecording ? <MicOff size={18} /> : <Mic size={18} />}
             </button>
 
-            <input
-              value={inputText}
-              onChange={e => setInputText(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleSend()}
-              disabled={isRecording}
-              className="flex-1 bg-slate-950/50 border border-slate-700/50 rounded-xl px-4 py-3 text-sm text-slate-200 outline-none focus:border-indigo-500/50 focus:bg-slate-900 transition-all placeholder:text-slate-600 disabled:opacity-50"
-              placeholder={isRecording ? "Listening..." : "Type a message..."}
-            />
+            <div className="flex-1">
+              <input
+                value={inputText}
+                onChange={e => setInputText(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleSend()}
+                disabled={isRecording}
+                className="w-full bg-transparent border-none text-sm text-gray-200 outline-none placeholder:text-gray-600 h-10 px-2"
+                placeholder={isRecording ? "Listening..." : "Type a message..."}
+              />
+            </div>
 
             <button
               onClick={handleSend}
               disabled={!inputText.trim() || isRecording}
-              className="p-3 bg-slate-800 hover:bg-slate-700 text-slate-300 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-colors border border-slate-700/50"
+              className="p-2.5 bg-indigo-600 hover:bg-indigo-500 text-white disabled:opacity-50 disabled:cursor-not-allowed rounded-xl transition-all hover:scale-105 active:scale-95"
             >
-              <Send size={20} />
+              <Send size={16} />
             </button>
           </div>
         </div>

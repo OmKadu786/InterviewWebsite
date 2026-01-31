@@ -1,4 +1,4 @@
-import { Upload, FileText, X } from 'lucide-react';
+import { Upload, FileText, X, MousePointer2 } from 'lucide-react';
 import { useState, useRef } from 'react';
 
 interface FileUploadProps {
@@ -17,38 +17,52 @@ export function FileUpload({ onFileSelect, selectedFile }: FileUploadProps) {
     e.preventDefault();
     setIsDragging(false);
     const files = e.dataTransfer.files;
-    if (files.length > 0 && files[0].type === 'application/pdf') {
+    if (files.length > 0 && (files[0].type === 'application/pdf' || files[0].type === 'image/jpeg' || files[0].type === 'image/png')) {
       onFileSelect(files[0]);
     }
   };
 
   return (
-    <div className="space-y-2">
-      <label className="block text-sm font-medium text-slate-300">Resume Upload</label>
+    <div className="space-y-4">
+      <label className="block text-sm font-medium text-gray-300">Resume Upload</label>
       {!selectedFile ? (
         <div
           onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}
           onClick={() => fileInputRef.current?.click()}
-          className={`relative border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-all duration-200 ${
-            isDragging ? 'border-indigo-400 bg-indigo-950/50' : 'border-slate-600 hover:border-slate-500 bg-slate-800/50'
-          }`}
+          className={`relative border border-dashed rounded-lg p-12 text-center cursor-pointer transition-all duration-200 group ${isDragging
+              ? 'border-blue-500 bg-blue-500/10'
+              : 'border-white/20 hover:border-blue-500/50 hover:bg-white/5 bg-[#161616]'
+            }`}
         >
-          <input ref={fileInputRef} type="file" accept=".pdf" onChange={(e) => onFileSelect(e.target.files?.[0] || null)} className="hidden" />
-          <Upload className="w-10 h-10 mx-auto mb-3 text-slate-400" />
-          <p className="text-slate-300 font-medium mb-1">Drop your resume here or click to browse</p>
-          <p className="text-sm text-slate-500">PDF files only</p>
+          <input ref={fileInputRef} type="file" accept=".pdf,.jpg,.png" onChange={(e) => onFileSelect(e.target.files?.[0] || null)} className="hidden" />
+
+          <div className="mb-4 inline-flex items-center justify-center w-12 h-12 rounded-lg bg-white/5 group-hover:bg-blue-500/20 transition-colors">
+            <Upload className="w-6 h-6 text-gray-400 group-hover:text-blue-400 transition-colors" />
+          </div>
+
+          <h3 className="text-lg font-medium text-white mb-1">
+            Drop your resume here or click to browse
+          </h3>
+          <p className="text-sm text-gray-500">
+            PDF, JPG, or PNG files
+          </p>
         </div>
       ) : (
-        <div className="flex items-center justify-between p-4 bg-slate-800 border border-slate-700 rounded-lg">
-          <div className="flex items-center space-x-3">
-            <FileText className="w-8 h-8 text-indigo-400" />
+        <div className="relative border border-blue-500/30 rounded-lg p-6 bg-blue-500/5 flex items-center justify-between group">
+          <div className="flex items-center space-x-4">
+            <div className="p-3 bg-blue-500/20 rounded-lg">
+              <FileText className="w-6 h-6 text-blue-400" />
+            </div>
             <div>
-              <p className="text-slate-200 font-medium">{selectedFile.name}</p>
-              <p className="text-sm text-slate-500">{(selectedFile.size / 1024).toFixed(2)} KB</p>
+              <p className="text-white font-medium mb-0.5">{selectedFile.name}</p>
+              <p className="text-sm text-gray-400">{(selectedFile.size / 1024).toFixed(2)} KB</p>
             </div>
           </div>
-          <button onClick={() => onFileSelect(null)} className="p-2 hover:bg-slate-700 rounded-lg transition-colors">
-            <X className="w-5 h-5 text-slate-400 hover:text-slate-200" />
+          <button
+            onClick={(e) => { e.stopPropagation(); onFileSelect(null); }}
+            className="p-2 hover:bg-white/10 rounded-lg transition-colors text-gray-400 hover:text-white"
+          >
+            <X className="w-5 h-5" />
           </button>
         </div>
       )}

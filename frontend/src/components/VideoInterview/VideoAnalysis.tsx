@@ -82,44 +82,49 @@ export const VideoAnalysis: React.FC<VideoAnalysisProps> = ({ onReady }) => {
     }, [isCapturing]);
 
     return (
-        <div className="flex flex-col gap-4 w-full h-full">
-            <div className="relative rounded-2xl overflow-hidden bg-slate-900 shadow-2xl border border-slate-800 aspect-video">
-                <Webcam
-                    audio={false}
-                    ref={webcamRef}
-                    screenshotFormat="image/jpeg"
-                    className="w-full h-full object-cover"
-                    mirrored
-                />
+        <div className="relative w-full h-full bg-black">
+            <Webcam
+                audio={false}
+                ref={webcamRef}
+                screenshotFormat="image/jpeg"
+                className="w-full h-full object-cover opacity-90"
+                mirrored
+            />
 
-                {/* Overlay Stats */}
-                <div className="absolute top-4 right-4 flex flex-col gap-2">
-                    <StatBadge icon={<Activity size={16} />} label="Focus" value={analysis.focus} color="bg-blue-500" />
-                    <StatBadge icon={<Smile size={16} />} label="Emotion" value={analysis.emotion} color="bg-yellow-500" />
-                    <StatBadge icon={<Brain size={16} />} label="Confidence" value={analysis.confidence} color="bg-purple-500" />
-                    <StatBadge icon={<Activity size={16} />} label="Stress" value={analysis.stress} color="bg-red-500" />
-                </div>
+            {/* Cinematic Gradient Overlay */}
+            <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-black/80 via-transparent to-black/20" />
 
-                {/* AI Coach Hint Removed as per user request */}
+            {/* HUD Stats Bar - Floating Pills */}
+            <div className="absolute bottom-6 w-full px-8 flex justify-center items-center gap-4">
+                <StatPill icon={<Activity size={14} />} label="Focus" value={analysis.focus} color="text-blue-400" track="bg-blue-400" />
+                <StatPill icon={<Smile size={14} />} label="Emotion" value={analysis.emotion} color="text-yellow-400" track="bg-yellow-400" />
+                <StatPill icon={<Brain size={14} />} label="Confidence" value={analysis.confidence} color="text-purple-400" track="bg-purple-400" />
+                <StatPill icon={<Activity size={14} />} label="Stress" value={analysis.stress} color="text-red-400" track="bg-red-400" />
+            </div>
+
+            {/* Recording Indicator */}
+            <div className="absolute top-6 left-6 flex items-center gap-2 px-3 py-1.5 bg-red-500/10 backdrop-blur-md rounded-full border border-red-500/20 shadow-lg shadow-red-500/10">
+                <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                <span className="text-[10px] font-bold text-red-400 tracking-widest uppercase">Live Analysis</span>
             </div>
         </div>
     );
 };
 
-const StatBadge = ({ icon, label, value, color }: { icon: React.ReactNode, label: string, value: number, color: string }) => (
-    <div className="bg-black/50 backdrop-blur-md px-3 py-2 rounded-lg flex items-center gap-3 border border-white/5 min-w-[140px]">
-        <div className={`p-1.5 rounded-md ${color} bg-opacity-20 text-white`}>
+const StatPill = ({ icon, label, value, color, track }: { icon: React.ReactNode, label: string, value: number, color: string, track: string }) => (
+    <div className="flex items-center gap-3 bg-black/40 backdrop-blur-md border border-white/10 px-4 py-2.5 rounded-2xl shadow-xl hover:bg-black/60 transition-all duration-300 hover:scale-105 hover:border-white/20 group">
+        <div className={`p-1.5 rounded-lg bg-white/5 ${color} group-hover:bg-white/10 transition-colors`}>
             {icon}
         </div>
-        <div className="flex-1">
-            <div className="flex justify-between text-xs text-slate-300 mb-1">
-                <span>{label}</span>
-                <span className="font-mono">{value}%</span>
+        <div className="flex flex-col gap-1 min-w-[80px]">
+            <div className="flex justify-between items-center">
+                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{label}</span>
+                <span className="text-[10px] font-mono font-bold text-white tabular-nums">{value}%</span>
             </div>
-            <div className="h-1 bg-white/10 rounded-full overflow-hidden">
+            <div className="h-1 w-full bg-white/10 rounded-full overflow-hidden">
                 <div
-                    className={`h-full ${color} transition-all duration-300 ease-out`}
-                    style={{ width: `${value}%` }}
+                    className={`h-full ${track} shadow-[0_0_8px_currentColor] transition-all duration-700 ease-out`}
+                    style={{ width: `${value}%`, color: 'inherit' }} // Use inherited color for shadow
                 />
             </div>
         </div>

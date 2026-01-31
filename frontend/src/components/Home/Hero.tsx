@@ -1,69 +1,87 @@
-import { ArrowRight, Brain, ChevronRight } from 'lucide-react';
+import React from 'react';
+import { Brain, ScanFace, BarChart3, ArrowRight, Sparkles } from 'lucide-react';
 
 interface HeroProps {
     onStartConfirm: () => void;
 }
 
-export const Hero = ({ onStartConfirm }: HeroProps) => {
+export const Hero: React.FC<HeroProps> = ({ onStartConfirm }) => {
     return (
-        <section className="relative min-h-screen pt-20 flex flex-col justify-center items-center px-6 overflow-hidden">
-            {/* Background Gradients */}
-            <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl" />
-            <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-600/10 rounded-full blur-3xl" />
+        <div className="flex-1 flex flex-col items-center justify-center p-4 relative overflow-hidden">
+            {/* Background Gradient */}
+            <div className="absolute inset-0 bg-gradient-to-b from-blue-900/10 via-transparent to-transparent pointer-events-none" />
 
-            <div className="max-w-4xl mx-auto text-center relative z-10">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-blue-400 text-xs font-semibold mb-6">
-                    <span className="relative flex h-2 w-2">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
-                    </span>
-                    New Feature: AI Video Analysis
+            <div className="max-w-4xl w-full text-center z-10 space-y-12">
+                {/* Header Section */}
+                <div className="space-y-6">
+                    <h1 className="text-6xl md:text-7xl font-bold tracking-tight">
+                        <span className="text-[#4ade80]">HireByte</span>
+                        <br />
+                        <span className="text-white">Your AI Interview Assistant</span>
+                    </h1>
+
+                    <p className="text-xl text-gray-400 max-w-2xl mx-auto leading-relaxed">
+                        Practice interviews with AI-powered feedback, real-time body language
+                        analysis, and comprehensive performance analytics. Ace your next interview.
+                    </p>
                 </div>
 
-                <h1 className="text-5xl md:text-7xl font-bold text-white tracking-tight mb-6 leading-tight">
-                    Job Interview <br />
-                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">Practice Platform</span>
-                </h1>
+                {/* Feature Cards Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <FeatureCard
+                        icon={<Brain className="w-6 h-6 text-[#4ade80]" />}
+                        title="AI Interviewer"
+                        description="Dynamic questions based on your resume"
+                    />
+                    <FeatureCard
+                        icon={<Sparkles className="w-6 h-6 text-blue-400" />}
+                        title="Vision Analysis"
+                        description="Eye contact, confidence & emotion tracking"
+                    />
+                    <FeatureCard
+                        icon={<BarChart3 className="w-6 h-6 text-[#4ade80]" />}
+                        title="Detailed Reports"
+                        description="Charts, insights & exportable PDF"
+                    />
+                </div>
 
-                <p className="text-lg text-gray-400 max-w-2xl mx-auto mb-12">
-                    Select and practice interviews for different roles and industries. Get real-time feedback on your answers and body language.
-                </p>
-
-                {/* Featured Card */}
-                <div className="max-w-sm mx-auto bg-[#161616] border border-white/10 rounded-2xl p-6 text-left hover:border-blue-500/50 transition-colors group cursor-pointer relative overflow-hidden" onClick={onStartConfirm}>
-                    <div className="absolute inset-0 bg-gradient-to-r from-blue-600/0 to-blue-600/0 group-hover:from-blue-600/5 group-hover:to-purple-600/5 transition-all" />
-
-                    <div className="flex justify-between items-start mb-4">
-                        <div className="p-3 rounded-lg bg-blue-900/20 text-blue-400">
-                            <Brain size={24} />
+                {/* CTA Section */}
+                <div className="mt-12 bg-gradient-to-r from-green-900/20 to-blue-900/20 rounded-2xl border border-white/10 p-1">
+                    <div className="bg-[#0b0b0b]/80 backdrop-blur-sm rounded-xl p-8 flex flex-col items-center space-y-6">
+                        <div className="flex items-center gap-2 mb-2">
+                            <div className="bg-[#161616] p-2 rounded-lg border border-white/10">
+                                <Brain className="w-6 h-6 text-[#4ade80]" />
+                            </div>
+                            <div className="px-3 py-1 rounded-full bg-[#161616] border border-white/10 text-xs text-[#4ade80] font-mono">
+                                AI Powered
+                            </div>
                         </div>
-                        <span className="text-xs font-mono text-gray-500 border border-white/5 px-2 py-1 rounded">Lv. 3</span>
-                    </div>
 
-                    <h3 className="text-xl font-semibold text-white mb-1 group-hover:text-blue-400 transition-colors">Machine learning engineer</h3>
-                    <p className="text-sm text-gray-500 mb-6">Data Science • 45 mins</p>
+                        <div className="text-center">
+                            <h3 className="text-2xl font-bold text-white mb-2">Start Your Practice Interview</h3>
+                            <p className="text-gray-400 text-sm">Software • Finance • Marketing • Any Role</p>
+                        </div>
 
-                    <button onClick={onStartConfirm} className="w-full bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 group-hover:shadow-lg group-hover:shadow-blue-900/20">
-                        Start Practice
-                        <ArrowRight size={16} />
-                    </button>
-                </div>
-
-                <div className="mt-12 flex items-center justify-center gap-8 text-gray-600 text-sm font-medium">
-                    <div className="flex items-center gap-2">
-                        <div className="w-1 h-1 rounded-full bg-gray-600" />
-                        <span>Instant Feedback</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <div className="w-1 h-1 rounded-full bg-gray-600" />
-                        <span>Industry Standard</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <div className="w-1 h-1 rounded-full bg-gray-600" />
-                        <span>No Login Required</span>
+                        <button
+                            onClick={onStartConfirm}
+                            className="group relative inline-flex items-center gap-2 px-8 py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-semibold transition-all duration-200 hover:shadow-lg hover:shadow-blue-500/25"
+                        >
+                            <span>Begin Interview</span>
+                            <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+                        </button>
                     </div>
                 </div>
             </div>
-        </section>
+        </div>
     );
 };
+
+const FeatureCard = ({ icon, title, description }: { icon: React.ReactNode, title: string, description: string }) => (
+    <div className="p-6 rounded-xl bg-[#161616] border border-white/5 hover:border-white/10 transition-colors text-left group">
+        <div className="mb-4 p-3 bg-white/5 rounded-lg w-fit group-hover:bg-white/10 transition-colors">
+            {icon}
+        </div>
+        <h3 className="text-lg font-semibold text-white mb-2">{title}</h3>
+        <p className="text-sm text-gray-400 leading-relaxed">{description}</p>
+    </div>
+);
