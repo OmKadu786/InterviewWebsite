@@ -7,4 +7,4 @@ python-dotenv
 python-multipart
 pydantic
 websockets
-opencv-python
+opencv-python-headless
