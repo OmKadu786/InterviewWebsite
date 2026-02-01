@@ -13,9 +13,36 @@ function App() {
   const [jobDescription, setJobDescription] = useState('');
   const [difficulty, setDifficulty] = useState<'Easy' | 'Medium' | 'Hard'>('Medium');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isJobDescExpanded, setIsJobDescExpanded] = useState(false);
+  const [currentQuestion, setCurrentQuestion] = useState('');
+  const [hint, setHint] = useState<string | null>(null);
+  const [isGettingHint, setIsGettingHint] = useState(false);
 
   // Validate form
   const isFormValid = selectedFile !== null && jobDescription.trim().length > 0;
+
+  const handleAiMessage = (text: string) => {
+    setCurrentQuestion(text);
+    setHint(null); // Reset hint for new question
+  };
+
+  const handleGetHint = async () => {
+    if (!currentQuestion) return;
+    setIsGettingHint(true);
+    try {
+      const response = await fetch('http://localhost:8000/get-hint', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: currentQuestion }),
+      });
+      const data = await response.json();
+      if (data.hint) setHint(data.hint);
+    } catch (error) {
+      console.error("Error getting hint:", error);
+    } finally {
+      setIsGettingHint(false);
+    }
+  };
 
   const handleStartInterview = async () => {
     if (!isFormValid) return;
@@ -69,55 +96,109 @@ function App() {
         <div className="flex-1 flex items-center justify-center p-6 h-screen">
           <div className="w-full max-w-[95rem] h-[92vh] grid grid-cols-1 lg:grid-cols-12 gap-6">
 
-            {/* Left Column: Context (3/12 width) */}
-            <div className="lg:col-span-3 bg-black/40 backdrop-blur-xl rounded-3xl border border-white/10 flex flex-col h-full overflow-hidden shadow-2xl relative group/context">
-              {/* Decorative gradient */}
-              <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-b from-indigo-500/10 to-transparent pointer-events-none" />
+            {/* Left Column: Context (3/12 width) - RESIZED */}
+            <div className="lg:col-span-3 flex flex-col h-full">
+              <div className="bg-black/40 backdrop-blur-xl rounded-3xl border border-white/10 flex flex-col overflow-hidden shadow-2xl relative group/context max-h-[60vh]">
+                {/* Decorative gradient */}
+                <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-b from-indigo-500/10 to-transparent pointer-events-none" />
 
-              <div className="p-6 pb-4 border-b border-white/5 flex items-center gap-3 relative">
-                <div className="p-2.5 bg-indigo-500/10 rounded-xl border border-indigo-500/20 shadow-[0_0_15px_rgba(99,102,241,0.15)]">
-                  <Sparkles className="w-5 h-5 text-indigo-400" />
+                <div className="p-6 pb-4 border-b border-white/5 flex items-center gap-3 relative shrink-0">
+                  <div className="p-2.5 bg-indigo-500/10 rounded-xl border border-indigo-500/20 shadow-[0_0_15px_rgba(99,102,241,0.15)]">
+                    <Sparkles className="w-5 h-5 text-indigo-400" />
+                  </div>
+                  <div>
+                    <h2 className="font-bold text-lg tracking-tight text-white">Interview Context</h2>
+                    <p className="text-xs text-gray-400 font-medium">Resume & Job Analysis</p>
+                  </div>
                 </div>
-                <div>
-                  <h2 className="font-bold text-lg tracking-tight text-white">Interview Context</h2>
-                  <p className="text-xs text-gray-400 font-medium">Resume & Job Analysis</p>
+
+                <div className="overflow-y-auto p-6 space-y-6 custom-scrollbar relative">
+                  {/* Resume Card */}
+                  <div className="space-y-2">
+                    <label className="text-[10px] text-gray-500 uppercase font-bold tracking-widest pl-1">Resume</label>
+                    <div className="bg-white/5 p-4 rounded-2xl border border-white/5 hover:border-white/10 hover:bg-white/[0.07] transition-all group cursor-pointer relative overflow-hidden">
+                      <div className="absolute top-0 right-0 p-3 opacity-20 group-hover:opacity-40 transition-opacity">
+                        <div className="w-16 h-16 bg-gradient-to-br from-indigo-500/30 to-purple-500/30 blur-2xl rounded-full" />
+                      </div>
+
+                      <div className="flex items-center gap-4 relative z-10">
+                        <div className="w-12 h-12 rounded-xl bg-[#1e1e24] border border-white/10 flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform duration-300">
+                          <span className="text-xs font-bold text-red-400 font-mono">PDF</span>
+                        </div>
+                        <div className="flex flex-col min-w-0">
+                          <span className="truncate font-medium text-gray-200 text-sm group-hover:text-white transition-colors">
+                            {selectedFile?.name || "resume.pdf"}
+                          </span>
+                          <span className="text-[10px] text-emerald-400 flex items-center gap-1 mt-0.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                            Analyzed & Ready
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Job Description Card -- CONDENSED */}
+                  <div className="space-y-2 flex flex-col">
+                    <label className="text-[10px] text-gray-500 uppercase font-bold tracking-widest pl-1">Target Role</label>
+                    <div className="bg-gradient-to-b from-white/5 to-transparent p-5 rounded-2xl border border-white/5 relative overflow-hidden transition-all duration-300">
+                      <p className="text-xs text-gray-300 whitespace-pre-wrap leading-relaxed font-light opacity-90 relative z-10">
+                        {isJobDescExpanded ? jobDescription : (
+                          <>
+                            {jobDescription.slice(0, 150)}
+                            {jobDescription.length > 150 && "..."}
+                          </>
+                        )}
+                      </p>
+
+                      {jobDescription.length > 150 && (
+                        <button
+                          onClick={() => setIsJobDescExpanded(!isJobDescExpanded)}
+                          className="mt-2 text-[10px] font-bold text-indigo-400 hover:text-indigo-300 transition-colors uppercase tracking-wide flex items-center gap-1"
+                        >
+                          {isJobDescExpanded ? "Show Less" : "Read More"}
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar relative">
-                {/* Resume Card */}
-                <div className="space-y-2">
-                  <label className="text-[10px] text-gray-500 uppercase font-bold tracking-widest pl-1">Resume</label>
-                  <div className="bg-white/5 p-4 rounded-2xl border border-white/5 hover:border-white/10 hover:bg-white/[0.07] transition-all group cursor-pointer relative overflow-hidden">
-                    <div className="absolute top-0 right-0 p-3 opacity-20 group-hover:opacity-40 transition-opacity">
-                      <div className="w-16 h-16 bg-gradient-to-br from-indigo-500/30 to-purple-500/30 blur-2xl rounded-full" />
-                    </div>
-
-                    <div className="flex items-center gap-4 relative z-10">
-                      <div className="w-12 h-12 rounded-xl bg-[#1e1e24] border border-white/10 flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform duration-300">
-                        <span className="text-xs font-bold text-red-400 font-mono">PDF</span>
-                      </div>
-                      <div className="flex flex-col min-w-0">
-                        <span className="truncate font-medium text-gray-200 text-sm group-hover:text-white transition-colors">
-                          {selectedFile?.name || "resume.pdf"}
-                        </span>
-                        <span className="text-[10px] text-emerald-400 flex items-center gap-1 mt-0.5">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                          Analyzed & Ready
-                        </span>
-                      </div>
-                    </div>
+              {/* Hint Box - Fills the empty space */}
+              <div className="flex-1 bg-black/40 backdrop-blur-xl rounded-3xl border border-white/10 flex flex-col overflow-hidden shadow-2xl relative group/hint p-6 space-y-4">
+                <div className="flex items-center gap-3 border-b border-white/5 pb-4">
+                  <div className="p-2 bg-yellow-500/10 rounded-lg border border-yellow-500/20">
+                    <Sparkles className="w-4 h-4 text-yellow-500" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-base text-white">Hint Context</h3>
+                    <p className="text-[10px] text-gray-400">AI Assistance</p>
                   </div>
                 </div>
 
-                {/* Job Description Card */}
-                <div className="space-y-2 flex-1 flex flex-col">
-                  <label className="text-[10px] text-gray-500 uppercase font-bold tracking-widest pl-1">Target Role</label>
-                  <div className="bg-gradient-to-b from-white/5 to-transparent p-5 rounded-2xl border border-white/5 flex-1 relative overflow-hidden">
-                    <p className="text-xs text-gray-300 whitespace-pre-wrap leading-relaxed font-light opacity-90 relative z-10">
-                      {jobDescription}
-                    </p>
-                  </div>
+                <div className="flex-1 flex flex-col items-center justify-center text-center">
+                  {!hint ? (
+                    <div className="space-y-3">
+                      <p className="text-xs text-gray-500">Need help with the current question?</p>
+                      <button
+                        onClick={handleGetHint}
+                        disabled={isGettingHint || !currentQuestion}
+                        className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-xs font-bold text-white transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {isGettingHint ? (
+                          <span className="flex items-center gap-2">
+                            <Loader2 className="w-3 h-3 animate-spin" /> Thinking...
+                          </span>
+                        ) : "Get Hint"}
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="w-full text-left bg-yellow-500/5 border border-yellow-500/10 rounded-xl p-4 animate-in fade-in zoom-in duration-300">
+                      <p className="text-xs text-gray-200 leading-relaxed italic">
+                        "{hint}"
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -133,7 +214,7 @@ function App() {
 
             {/* Right Column: Chat (3/12 width) */}
             <div className="lg:col-span-3 bg-black/40 backdrop-blur-xl rounded-3xl border border-white/10 flex flex-col overflow-hidden h-full shadow-2xl">
-              <ChatBox onEnd={handleEndInterview} />
+              <ChatBox onEnd={handleEndInterview} onAiMessage={handleAiMessage} />
             </div>
 
           </div>

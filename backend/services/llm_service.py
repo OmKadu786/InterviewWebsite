@@ -32,3 +32,31 @@ async def get_ai_response(resume_text, job_desc, chat_history):
     except Exception as e:
         print(f"OpenAI Error: {e}")
         return "I'm the AI Interviewer. Please configure your OPENAI_API_KEY in the backend/.env file to enable my intelligence! For now, let's pretend I asked you a question about your resume."
+
+async def get_hint(question, resume_text, job_desc):
+    system_prompt = f"""
+    You are a helpful mentor assisting a candidate during an interview.
+    JOB: {job_desc}
+    RESUME: {resume_text}
+    
+    The interviewer just asked: "{question}"
+    
+    Provide a subtle HINT to help the candidate answer. 
+    - Do NOT give the direct answer.
+    - Do NOT write a full script.
+    - Provide key value points, concepts, or topics they should mention.
+    - Keep it short (bullet points or 2 sentences max).
+    - Tone: Encouraging and professional.
+    """
+    
+    messages = [{"role": "system", "content": system_prompt}]
+    
+    try:
+        response = await client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=messages
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        print(f"OpenAI Error (Hint): {e}")
+        return "Focus on your relevant experience and how it aligns with the job requirements."

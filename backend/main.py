@@ -2,13 +2,14 @@ import os
 import json
 import base64
 from fastapi import FastAPI, WebSocket, UploadFile, File, Form
+from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from openai import AsyncOpenAI
 from dotenv import load_dotenv
 
 # Import fixed: using the new function name to avoid ImportError
 from services.pdf_service import extract_text_from_pdf
-from services.llm_service import get_ai_response 
+from services.llm_service import get_ai_response, get_hint
 from services.tts_service import generate_audio
 from services.video_service import process_video_frame, Stabilizer
 
@@ -25,6 +26,17 @@ app.add_middleware(
 )
 
 session_data = {"resume_text": "", "job_description": ""}
+
+class HintRequest(BaseModel):
+    question: str
+
+@app.post("/get-hint")
+async def get_interview_hint(request: HintRequest):
+    if not session_data["resume_text"]:
+        return {"hint": "Please upload a resume first."}
+    
+    hint = await get_hint(request.question, session_data["resume_text"], session_data["job_description"])
+    return {"hint": hint}
 
 @app.post("/upload-resume")
 async def upload_resume(file: UploadFile = File(...), job_description: str = Form(...)):

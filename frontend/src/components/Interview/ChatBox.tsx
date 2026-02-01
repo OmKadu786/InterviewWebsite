@@ -7,7 +7,7 @@ interface Message {
   text: string;
 }
 
-export function ChatBox({ onEnd }: { onEnd: () => void }) {
+export function ChatBox({ onEnd, onAiMessage }: { onEnd: () => void, onAiMessage: (text: string) => void }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState("");
   const [currentAudio, setCurrentAudio] = useState<string | null>(null);
@@ -46,6 +46,8 @@ export function ChatBox({ onEnd }: { onEnd: () => void }) {
         if (data.type === 'ai_turn') {
           setMessages(prev => [...prev, { role: 'ai', text: data.text }]);
           if (data.audio) setCurrentAudio(data.audio);
+          // Notify parent (App.tsx) about the new question
+          if (onAiMessage && data.text) onAiMessage(data.text);
         }
       } catch (e) {
         console.error("Error parsing WS message:", e);
@@ -189,8 +191,8 @@ export function ChatBox({ onEnd }: { onEnd: () => void }) {
             <div key={i} className={`flex ${m.role === 'ai' ? 'justify-start' : 'justify-end'} group`}>
               <div
                 className={`max-w-[85%] p-4 text-sm leading-relaxed shadow-sm transition-all duration-200 ${m.role === 'ai'
-                    ? 'bg-[#18181b] border border-white/5 text-gray-200 rounded-2xl rounded-tl-sm hover:border-white/10'
-                    : 'bg-indigo-600 text-white rounded-2xl rounded-tr-sm shadow-indigo-500/10'
+                  ? 'bg-[#18181b] border border-white/5 text-gray-200 rounded-2xl rounded-tl-sm hover:border-white/10'
+                  : 'bg-indigo-600 text-white rounded-2xl rounded-tr-sm shadow-indigo-500/10'
                   }`}
               >
                 {m.text}
