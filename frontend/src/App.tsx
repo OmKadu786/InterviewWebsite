@@ -64,7 +64,9 @@ function App() {
       setView('interview');
     } catch (error) {
       console.error('Error starting interview:', error);
-      alert("Make sure your Python backend is running on port 8000!");
+      console.error('Error starting interview:', error);
+      alert("Could not connect to the backend. Please check if the backend is running and configured correctly.");
+
     } finally {
       setIsSubmitting(false);
     }
