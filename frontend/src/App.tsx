@@ -6,6 +6,8 @@ import { VideoAnalysis } from './components/VideoInterview/VideoAnalysis';
 import { Footer } from './components/Layout/Footer';
 import { Hero } from './components/Home/Hero';
 import { Report } from './components/Report/Report'; // Will create this next
+import { API_BASE_URL } from './config';
+
 
 function App() {
   const [view, setView] = useState<'landing' | 'setup' | 'interview' | 'report'>('landing');
@@ -30,7 +32,7 @@ function App() {
     if (!currentQuestion) return;
     setIsGettingHint(true);
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/get-hint`, {
+      const response = await fetch(`${API_BASE_URL}/get-hint`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ question: currentQuestion }),
@@ -53,7 +55,7 @@ function App() {
       formData.append('job_description', jobDescription);
       formData.append('difficulty', difficulty); // Sending difficulty
 
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/upload-resume`, {
+      const response = await fetch(`${API_BASE_URL}/upload-resume`, {
         method: 'POST',
         body: formData,
       });

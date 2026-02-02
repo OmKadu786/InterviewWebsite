@@ -1,6 +1,8 @@
 import React, { useCallback, useRef, useState, useEffect } from 'react';
 import Webcam from 'react-webcam';
 import { Activity, Smile, Brain } from 'lucide-react';
+import { WS_BASE_URL } from '../../config';
+
 
 interface VideoAnalysisProps {
     onReady?: () => void;
@@ -29,7 +31,8 @@ export const VideoAnalysis: React.FC<VideoAnalysisProps> = ({ onReady }) => {
     });
 
     const connectWebSocket = useCallback(() => {
-        socketRef.current = new WebSocket('ws://localhost:8000/ws/video');
+        socketRef.current = new WebSocket(`${WS_BASE_URL}/ws/video`);
+
 
         socketRef.current.onopen = () => {
             console.log('Video WebSocket connected');

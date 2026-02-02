@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { Send, X, Mic, MicOff, Loader2, Sparkles } from 'lucide-react';
 import { AudioPlayer } from './AudioPlayer';
+import { WS_BASE_URL, API_BASE_URL } from '../../config';
+
 
 interface Message {
   role: 'ai' | 'user';
@@ -32,8 +34,9 @@ export function ChatBox({ onEnd, onAiMessage }: { onEnd: () => void, onAiMessage
   // 2. Initialize WebSocket & Request Mic Permissions on Mount
   useEffect(() => {
     // WebSocket Setup
-    const ws = new WebSocket('ws://localhost:8000/ws/interview');
+    const ws = new WebSocket(`${WS_BASE_URL}/ws/interview`);
     socketRef.current = ws;
+
 
     ws.onopen = () => {
       setIsConnected(true);
@@ -119,7 +122,8 @@ export function ChatBox({ onEnd, onAiMessage }: { onEnd: () => void, onAiMessage
 
     try {
       // Use full URL to avoid port issues if proxy isn't set
-      const res = await fetch('http://localhost:8000/transcribe', {
+      const res = await fetch(`${API_BASE_URL}/transcribe`, {
+
         method: 'POST',
         body: formData
       });
