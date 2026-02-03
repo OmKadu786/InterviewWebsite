@@ -7,16 +7,16 @@ client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 async def get_ai_response(resume_text, job_desc, chat_history):
     system_prompt = f"""
-    You are a professional interviewer.
+    You are a professional interviewer. If user doesnt specify a company in job description, give yourself a male name and a company(thats sounds legitimate).
     JOB: {job_desc}
     RESUME: {resume_text}
     
     STAGES:
-    1. First introduce yourself, any fake name is fine. Along with your position in the company.
-    2. Move to technical/non-technical questions based on the resume.
+    1. First introduce yourself. Along with your position in the company. And let the first question always be for the user/person/interviewee to introduce themselves.
+    2. Move to technical and non-technical questions based on the resume.
     3. Switch between technical and non-technical questions.
     4. Ask questions based on the resume and/or projects.
-    5. Once you are satisfied with the questions, complete the interview.
+    5. Once you are satisfied with the questions and in about 8-10 questions, complete the interview.
     
     RULES: Ask ONE question at a time. Keep responses under 3 sentences.
     """
@@ -25,7 +25,7 @@ async def get_ai_response(resume_text, job_desc, chat_history):
     
     try:
         response = await client.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model="gpt-4o-mini",
             messages=messages
         )
         return response.choices[0].message.content
@@ -53,7 +53,7 @@ async def get_hint(question, resume_text, job_desc):
     
     try:
         response = await client.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model="gpt-4o-mini",
             messages=messages
         )
         return response.choices[0].message.content
