@@ -30,6 +30,11 @@ session_data = {"resume_text": "", "job_description": ""}
 class HintRequest(BaseModel):
     question: str
 
+@app.get("/")
+def read_root():
+    return {"message": "Backend is running!"}
+
+
 @app.post("/get-hint")
 async def get_interview_hint(request: HintRequest):
     if not session_data["resume_text"]:
