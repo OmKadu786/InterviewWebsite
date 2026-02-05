@@ -17,7 +17,7 @@ def generate_audio(text: str):
         audio_generator = client.text_to_speech.convert(
             text=text,
             voice_id=voice_id,
-            model_id="eleven_multilingual_v2"
+            model_id="eleven_turbo_v2_5"
         )
 
         # Collect the generator chunks into a single bytes object

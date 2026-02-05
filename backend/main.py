@@ -1,7 +1,8 @@
 import os
 import json
 import base64
-from fastapi import FastAPI, WebSocket, UploadFile, File, Form
+import asyncio
+from fastapi import FastAPI, WebSocket, UploadFile, File, Form, BackgroundTasks
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from openai import AsyncOpenAI
@@ -43,12 +44,29 @@ async def get_interview_hint(request: HintRequest):
     hint = await get_hint(request.question, session_data["resume_text"], session_data["job_description"])
     return {"hint": hint}
 
+async def prepare_initial_greeting(resume_text: str, job_description: str):
+    print("Starting background greeting generation...")
+    # 1. Generate text
+    greeting_text = await get_ai_response(resume_text, job_description, [])
+    session_data["greeting_text"] = greeting_text
+    print(f"Greeting text generated: {greeting_text[:50]}...")
+    
+    # 2. Generate Audio (run in thread pool to avoid blocking event loop)
+    # generate_audio is synchronous/blocking I/O
+    audio_bytes = await asyncio.to_thread(generate_audio, greeting_text)
+    session_data["greeting_audio"] = audio_bytes
+    print("Greeting audio generated and cached.")
+
 @app.post("/upload-resume")
-async def upload_resume(file: UploadFile = File(...), job_description: str = Form(...)):
+async def upload_resume(background_tasks: BackgroundTasks, file: UploadFile = File(...), job_description: str = Form(...)):
     pdf_bytes = await file.read()
     text = extract_text_from_pdf(pdf_bytes)
     session_data["resume_text"] = text
     session_data["job_description"] = job_description
+    
+    # Trigger background generation of opening lines
+    background_tasks.add_task(prepare_initial_greeting, text, job_description)
+    
     return {"message": "Data processed successfully!"}
 
 @app.post("/transcribe")
@@ -82,15 +100,28 @@ async def interview_websocket(websocket: WebSocket):
     chat_history = []
     
     # 1. Automatic Greeting
-    if session_data["resume_text"]:
-        response_text = await get_ai_response(
-            session_data["resume_text"], 
-            session_data["job_description"],
-            chat_history
-        )
+    # 1. Automatic Greeting
+    if session_data.get("resume_text"):
+        # Check if we have pre-generated content
+        greeting_text = session_data.get("greeting_text")
+        audio_bytes = session_data.get("greeting_audio")
         
-        chat_history.append({"role": "assistant", "content": response_text})
-        audio_bytes = generate_audio(response_text)
+        if greeting_text:
+            print("Using pre-generated greeting!")
+            # Clear them so they aren't reused improperly if logic changes (optional)
+            # session_data["greeting_text"] = None 
+            # session_data["greeting_audio"] = None
+        else:
+            print("Pre-generation not ready, generating on-the-fly...")
+            greeting_text = await get_ai_response(
+                session_data["resume_text"], 
+                session_data["job_description"],
+                chat_history
+            )
+            audio_bytes = generate_audio(greeting_text)
+            
+        chat_history.append({"role": "assistant", "content": greeting_text})
+        
         if audio_bytes:
             audio_b64 = base64.b64encode(audio_bytes).decode('utf-8')
         else:
@@ -98,7 +129,7 @@ async def interview_websocket(websocket: WebSocket):
         
         await websocket.send_json({
             "type": "ai_turn",
-            "text": response_text,
+            "text": greeting_text,
             "audio": audio_b64
         })
 
