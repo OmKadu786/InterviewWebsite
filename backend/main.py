@@ -26,7 +26,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-session_data = {"resume_text": "", "job_description": ""}
+session_data = {"resume_text": "", "job_description": "", "hint_level": 0}
 
 class HintRequest(BaseModel):
     question: str
@@ -41,8 +41,16 @@ async def get_interview_hint(request: HintRequest):
     if not session_data["resume_text"]:
         return {"hint": "Please upload a resume first."}
     
-    hint = await get_hint(request.question, session_data["resume_text"], session_data["job_description"])
-    return {"hint": hint}
+    # Increment hint level, max out at 3
+    current_level = session_data.get("hint_level", 0) + 1
+    if current_level > 3: 
+        current_level = 3
+    session_data["hint_level"] = current_level
+    
+    print(f"Generating hint at level {current_level} for question: {request.question[:30]}...")
+    
+    hint = await get_hint(request.question, session_data["resume_text"], session_data["job_description"], level=current_level)
+    return {"hint": hint, "level": current_level}
 
 async def prepare_initial_greeting(resume_text: str, job_description: str):
     print("Starting background greeting generation...")
@@ -143,6 +151,9 @@ async def interview_websocket(websocket: WebSocket):
                 # Add user message to history
                 chat_history.append({"role": "user", "content": msg["text"]})
                 
+                # Reset hint level for the new question
+                session_data["hint_level"] = 0
+
                 # Get next question/response from AI
                 ai_reply = await get_ai_response(
                     session_data["resume_text"],
