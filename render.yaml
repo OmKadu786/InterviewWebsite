@@ -33,7 +33,7 @@ services:
         fromService:
           name: hirebyte-backend
           type: web
-          property: hostport
+          property: url
     headers:
       - path: /*
         name: Cache-Control
