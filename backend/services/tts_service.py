@@ -4,8 +4,16 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# Check both possible variable names to be safe
+api_key = os.getenv("ELEVENLABS_API_KEY") or os.getenv("ELEVEN_LABS_API_KEY")
+
+if not api_key:
+    print("WARNING: No ElevenLabs API Key found (checked ELEVENLABS_API_KEY and ELEVEN_LABS_API_KEY)")
+else:
+    print(f"ElevenLabs API Key found: ...{api_key[-4:]}")
+
 client = ElevenLabs(
-    api_key=os.getenv("ELEVENLABS_API_KEY")
+    api_key=api_key
 )
 
 def generate_audio(text: str):
