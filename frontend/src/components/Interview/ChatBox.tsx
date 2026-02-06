@@ -9,7 +9,8 @@ interface Message {
   text: string;
 }
 
-export function ChatBox({ onEnd, onAiMessage }: { onEnd: () => void, onAiMessage: (text: string) => void }) {
+// Update interface
+export function ChatBox({ onEnd, onAiMessage }: { onEnd: (messages: Message[]) => void, onAiMessage: (text: string) => void }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState("");
   const [currentAudio, setCurrentAudio] = useState<string | null>(null);
@@ -173,7 +174,7 @@ export function ChatBox({ onEnd, onAiMessage }: { onEnd: () => void, onAiMessage
         </div>
 
         <button
-          onClick={onEnd}
+          onClick={() => onEnd(messages)}
           className="hover:bg-red-500/10 p-2 rounded-lg text-gray-500 hover:text-red-400 transition-colors"
           title="End Interview"
         >

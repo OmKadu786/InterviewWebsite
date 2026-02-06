@@ -1,10 +1,86 @@
-import { Sparkles, Download, Share2, RotateCcw, CheckCircle, AlertCircle } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Sparkles, Download, Share2, RotateCcw, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { API_BASE_URL } from '../../config';
 
 interface ReportProps {
     onRestart: () => void;
+    chatHistory: { role: string, text: string }[];
+    jobDescription: string;
 }
 
-export function Report({ onRestart }: ReportProps) {
+interface ReportData {
+    score: number;
+    technical_accuracy: number;
+    communication: number;
+    strengths: string[];
+    weaknesses: string[];
+    summary: string;
+}
+
+export function Report({ onRestart, chatHistory, jobDescription }: ReportProps) {
+    const [reportData, setReportData] = useState<ReportData | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
+
+    useEffect(() => {
+        const fetchReport = async () => {
+            try {
+                const response = await fetch(`${API_BASE_URL}/generate-report`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        chat_history: chatHistory,
+                        job_description: jobDescription
+                    }),
+                });
+
+                if (!response.ok) throw new Error("Failed to generate report");
+
+                const data = await response.json();
+                setReportData(data);
+            } catch (err) {
+                console.error(err);
+                setError("Could not generate report. Please try again.");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchReport();
+    }, [chatHistory, jobDescription]);
+
+    if (loading) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-6">
+                <div className="relative">
+                    <div className="absolute inset-0 bg-blue-500 blur-xl opacity-20 rounded-full animate-pulse" />
+                    <Loader2 className="w-16 h-16 text-blue-500 animate-spin relative z-10" />
+                </div>
+                <div className="text-center space-y-2">
+                    <h2 className="text-2xl font-bold text-white">Generating Analysis...</h2>
+                    <p className="text-gray-400">AI is reviewing your interview performance</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
+                <AlertCircle className="w-16 h-16 text-red-500" />
+                <p className="text-xl text-red-400">{error}</p>
+                <button
+                    onClick={onRestart}
+                    className="px-6 py-2 bg-white/10 hover:bg-white/20 rounded-xl text-white transition-colors"
+                >
+                    Return Home
+                </button>
+            </div>
+        );
+    }
+
+    if (!reportData) return null;
+
     return (
         <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in duration-500">
 
@@ -16,7 +92,7 @@ export function Report({ onRestart }: ReportProps) {
                 </div>
                 <h1 className="text-4xl font-bold text-white">Interview Report</h1>
                 <p className="text-gray-400 max-w-lg mx-auto">
-                    Here is a detailed breakdown of your performance. AI analysis suggests areas for improvement and highlights your strengths.
+                    {reportData.summary}
                 </p>
             </div>
 
@@ -29,7 +105,7 @@ export function Report({ onRestart }: ReportProps) {
 
                     <h3 className="text-lg font-medium text-gray-300 mb-6">Overall Score</h3>
                     <div className="flex items-end gap-4">
-                        <span className="text-6xl font-bold text-white">85</span>
+                        <span className="text-6xl font-bold text-white">{reportData.score}</span>
                         <span className="text-xl text-gray-500 mb-2">/ 100</span>
                     </div>
 
@@ -37,19 +113,25 @@ export function Report({ onRestart }: ReportProps) {
                         <div>
                             <div className="flex justify-between text-sm mb-2">
                                 <span className="text-gray-400">Technical Accuracy</span>
-                                <span className="text-white">90%</span>
+                                <span className="text-white">{reportData.technical_accuracy}%</span>
                             </div>
                             <div className="h-2 bg-white/5 rounded-full overflow-hidden">
-                                <div className="h-full bg-blue-500 w-[90%] rounded-full"></div>
+                                <div
+                                    className="h-full bg-blue-500 rounded-full transition-all duration-1000"
+                                    style={{ width: `${reportData.technical_accuracy}%` }}
+                                />
                             </div>
                         </div>
                         <div>
                             <div className="flex justify-between text-sm mb-2">
                                 <span className="text-gray-400">Communication</span>
-                                <span className="text-white">80%</span>
+                                <span className="text-white">{reportData.communication}%</span>
                             </div>
                             <div className="h-2 bg-white/5 rounded-full overflow-hidden">
-                                <div className="h-full bg-purple-500 w-[80%] rounded-full"></div>
+                                <div
+                                    className="h-full bg-purple-500 rounded-full transition-all duration-1000"
+                                    style={{ width: `${reportData.communication}%` }}
+                                />
                             </div>
                         </div>
                     </div>
@@ -58,12 +140,14 @@ export function Report({ onRestart }: ReportProps) {
                 {/* Quick Stats */}
                 <div className="space-y-6">
                     <div className="bg-[#161616] p-6 rounded-2xl border border-white/5">
-                        <h4 className="text-sm text-gray-400 mb-2">Duration</h4>
-                        <p className="text-2xl font-bold text-white">45m 12s</p>
+                        <h4 className="text-sm text-gray-400 mb-2">Questions Discussed</h4>
+                        <p className="text-2xl font-bold text-white">{chatHistory.filter(m => m.role === 'ai').length}</p>
                     </div>
                     <div className="bg-[#161616] p-6 rounded-2xl border border-white/5">
-                        <h4 className="text-sm text-gray-400 mb-2">Questions Answered</h4>
-                        <p className="text-2xl font-bold text-white">12 / 12</p>
+                        <h4 className="text-sm text-gray-400 mb-2">Focus</h4>
+                        <p className="text-lg font-bold text-white truncate" title={jobDescription}>
+                            {jobDescription.split(' ').slice(0, 3).join(' ')}...
+                        </p>
                     </div>
                 </div>
             </div>
@@ -76,11 +160,7 @@ export function Report({ onRestart }: ReportProps) {
                         <h3 className="font-semibold">Strengths</h3>
                     </div>
                     <ul className="space-y-3">
-                        {[
-                            "Strong understanding of React hooks and patterns",
-                            "Clear communication of thought process",
-                            "Good error handling strategies"
-                        ].map((item, i) => (
+                        {reportData.strengths.map((item, i) => (
                             <li key={i} className="flex gap-3 text-gray-300 text-sm">
                                 <span className="w-1.5 h-1.5 rounded-full bg-green-500 mt-2 flex-shrink-0" />
                                 {item}
@@ -95,11 +175,7 @@ export function Report({ onRestart }: ReportProps) {
                         <h3 className="font-semibold">Areas for Improvement</h3>
                     </div>
                     <ul className="space-y-3">
-                        {[
-                            "Could elaborate more on system design scalability",
-                            "Consider mentioning alternative approaches earlier",
-                            "Watch out for edge cases in algorithm implementation"
-                        ].map((item, i) => (
+                        {reportData.weaknesses.map((item, i) => (
                             <li key={i} className="flex gap-3 text-gray-300 text-sm">
                                 <span className="w-1.5 h-1.5 rounded-full bg-yellow-500 mt-2 flex-shrink-0" />
                                 {item}

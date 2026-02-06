@@ -19,6 +19,7 @@ function App() {
   const [currentQuestion, setCurrentQuestion] = useState('');
   const [hint, setHint] = useState<string | null>(null);
   const [isGettingHint, setIsGettingHint] = useState(false);
+  const [chatHistory, setChatHistory] = useState<{ role: string, text: string }[]>([]);
 
   // Validate form
   const isFormValid = selectedFile !== null && jobDescription.trim().length > 0;
@@ -72,7 +73,8 @@ function App() {
     }
   };
 
-  const handleEndInterview = () => {
+  const handleEndInterview = (history: { role: string, text: string }[]) => {
+    setChatHistory(history);
     setView('report');
   };
 
@@ -85,7 +87,11 @@ function App() {
           {/* Report Component will be rendered here. 
                Using a placeholder for now until I create the file in the next step. 
            */}
-          <Report onRestart={() => setView('landing')} />
+          <Report
+            onRestart={() => setView('landing')}
+            chatHistory={chatHistory}
+            jobDescription={jobDescription}
+          />
         </div>
       </div>
     );

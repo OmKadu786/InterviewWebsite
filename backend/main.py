@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 
 # Import fixed: using the new function name to avoid ImportError
 from services.pdf_service import extract_text_from_pdf
-from services.llm_service import get_ai_response, get_hint
+from services.llm_service import get_ai_response, get_hint, generate_interview_report
 from services.tts_service import generate_audio
 from services.video_service import process_video_frame, Stabilizer
 
@@ -51,6 +51,22 @@ async def get_interview_hint(request: HintRequest):
     
     hint = await get_hint(request.question, session_data["resume_text"], session_data["job_description"], level=current_level)
     return {"hint": hint, "level": current_level}
+
+class ReportRequest(BaseModel):
+    chat_history: list
+    resume_text: str = ""
+    job_description: str = ""
+
+@app.post("/generate-report")
+async def generate_report(request: ReportRequest):
+    # Prefer data sent from frontend, fallback to session
+    resume_text = request.resume_text or session_data.get("resume_text", "")
+    job_desc = request.job_description or session_data.get("job_description", "")
+    
+    print("Generating interview report...")
+    report_json = await generate_interview_report(request.chat_history, resume_text, job_desc)
+    
+    return json.loads(report_json)
 
 async def prepare_initial_greeting(resume_text: str, job_description: str):
     print("Starting background greeting generation...")

@@ -77,3 +77,48 @@ async def get_hint(question, resume_text, job_desc, level=1):
     except Exception as e:
         print(f"OpenAI Error (Hint): {e}")
         return "Focus on your relevant experience and how it aligns with the job requirements."
+
+async def generate_interview_report(chat_history, resume_text, job_desc):
+    system_prompt = f"""
+    You are an expert technical interviewer and career coach.
+    Analyze the following interview transcript to provide a detailed performance report.
+    
+    JOB DESCRIPTION:
+    {job_desc}
+    
+    RESUME:
+    {resume_text}
+    
+    TRANSCRIPT:
+    {chat_history}
+    
+    Provide the output in valid JSON format with the following structure:
+    {{
+        "score": <0-100 integer>,
+        "technical_accuracy": <0-100 integer>,
+        "communication": <0-100 integer>,
+        "strengths": ["string", "string", "string"], (3-5 items)
+        "weaknesses": ["string", "string", "string"], (3-5 items)
+        "summary": "string"
+    }}
+    
+    Make sure the feedback is specific to the conversation.
+    """
+    
+    try:
+        response = await client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "system", "content": system_prompt}],
+            response_format={"type": "json_object"}
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        print(f"OpenAI Error (Report): {e}")
+        return json.dumps({
+            "score": 0,
+            "technical_accuracy": 0,
+            "communication": 0,
+            "strengths": ["Error generating report"],
+            "weaknesses": ["Please try again"],
+            "summary": "An error occurred while generating the report."
+        })
