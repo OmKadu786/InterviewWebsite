@@ -4,7 +4,7 @@
 services:
   # Backend - Python FastAPI
   - type: web
-    name: hirebyte-backend
+    name: alphabyte-backend
     runtime: python
     region: oregon
     plan: free
@@ -24,14 +24,14 @@ services:
 
   # Frontend - React/Vite Static Site
   - type: static
-    name: hirebyte-frontend
+    name: alphabyte-frontend
     buildCommand: npm install && npm run build
     staticPublishPath: dist
     rootDir: frontend
     envVars:
       - key: VITE_API_URL
         fromService:
-          name: hirebyte-backend
+          name: alphabyte-backend
           type: web
           property: url
     headers:

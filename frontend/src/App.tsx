@@ -124,7 +124,7 @@ function App() {
       setView('interview');
     } catch (error) {
       console.error('Error starting interview:', error);
-      alert("Could not connect to the backend. Please check if the backend is running and configured correctly.");
+      alert(`Could not connect to the backend at: ${API_ENDPOINTS.health}\n\nPlease check if the backend is running and the VITE_API_URL environment variable is set correctly in Render.`);
     } finally {
       setIsSubmitting(false);
     }

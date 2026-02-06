@@ -9,6 +9,13 @@ const currentHost = typeof window !== 'undefined' ? window.location.hostname : '
 // - Otherwise, use the same hostname as the frontend but on port 8000
 const API_BASE_URL = import.meta.env.VITE_API_URL || `http://${currentHost}:8000`;
 
+console.log('HireByte API Config:', {
+  currentHost,
+  apiUrl: API_BASE_URL,
+  isProduction: import.meta.env.PROD,
+  hasEnvVar: !!import.meta.env.VITE_API_URL
+});
+
 export const API_ENDPOINTS = {
   uploadResume: `${API_BASE_URL}/upload-resume`,
   transcribe: `${API_BASE_URL}/transcribe`,
