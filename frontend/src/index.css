@@ -67,6 +67,28 @@
   background: #555;
 }
 
+/* Chat Scrollbar - More Visible */
+.chat-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+.chat-scroll::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+}
+.chat-scroll::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #2ecc71, #003366);
+  border-radius: 4px;
+  min-height: 40px;
+}
+.chat-scroll::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #27ae60, #004080);
+}
+/* Firefox scrollbar support */
+.chat-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #2ecc71 rgba(255,255,255,0.05);
+}
+
 @keyframes waveform {
   0%,
   100% {

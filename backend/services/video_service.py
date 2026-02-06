@@ -23,16 +23,25 @@ class Stabilizer:
         self.p0 = None
         self.is_steady = False
         
-        # Smoothing buffers (Hysteresis)
-        self.ui_focus = 100.0
+        # Smoothing buffers - reasonable starting values
+        self.ui_focus = 70.0
         self.ui_emotion = 50.0
-        self.confidence_score = 80.0
-        self.focus_score = 100.0
+        self.confidence_score = 60.0
+        self.focus_score = 70.0
         self.emotion_score = 50.0
         
         # Internal high-precision float values
-        self.internal_focus = 100.0
+        self.internal_focus = 70.0
         self.internal_emotion = 50.0
+        
+        # Hint stabilization - prevent rapid changes
+        self.current_hint = "Look at the camera and relax."
+        self.hint_last_changed = time.time()
+        self.hint_cooldown = 3.0  # Minimum seconds between hint changes
+        
+        # Eye detection history for blink detection
+        self.eyes_history = []  # Store last N detections
+        self.eyes_history_size = 5
 
     def check_stability(self, gray, face_roi):
         """
@@ -77,34 +86,79 @@ class Stabilizer:
         self.is_steady = steady
         return steady
 
-    def smooth(self, current_val, target_val, alpha=0.05):
+    def smooth(self, current_val, target_val, alpha=0.15):
         """
-        Adaptive smoothing.
-        If steady, alpha is effectively 0 (Locked).
-        If moving, use alpha.
+        Adaptive smoothing with faster response for drops, slower for rises.
+        This makes drops (like closing eyes) more responsive.
         """
-        if self.is_steady:
-            # Ultra slow drift if steady, just to keep it alive
-            return current_val * 0.99 + target_val * 0.01
+        if target_val < current_val:
+            # Faster response for decreases (more accurate)
+            effective_alpha = alpha * 2.0
         else:
-            return current_val * (1.0 - alpha) + target_val * alpha
+            # Slower response for increases (less jittery)
+            effective_alpha = alpha
+        
+        if self.is_steady:
+            # Slower drift if steady, but still responsive
+            effective_alpha *= 0.5
+        
+        return current_val * (1.0 - effective_alpha) + target_val * effective_alpha
 
     def get_ui_value(self, internal_val, last_displayed):
         """
-        Hysteresis: Only update UI if change is > 1% to stop flicker.
+        Hysteresis: Only update UI if change is > 1% for smoother updates.
         """
         diff = abs(internal_val - last_displayed)
         if diff > 1.0: 
             return internal_val
         return last_displayed
+    
+    def update_eyes_history(self, num_eyes):
+        """Track eye detection history for blink vs closed eyes differentiation"""
+        self.eyes_history.append(num_eyes)
+        if len(self.eyes_history) > self.eyes_history_size:
+            self.eyes_history.pop(0)
+    
+    def get_average_eyes(self):
+        """Get average number of eyes detected recently"""
+        if not self.eyes_history:
+            return 0
+        return sum(self.eyes_history) / len(self.eyes_history)
+    
+    def update_hint(self, focus, emotion, confidence):
+        """
+        Update hint with cooldown to prevent rapid changes.
+        Only changes hint if cooldown has passed.
+        """
+        current_time = time.time()
+        
+        # Check if cooldown has passed
+        if current_time - self.hint_last_changed < self.hint_cooldown:
+            return self.current_hint
+        
+        # Determine appropriate hint based on current state
+        if focus < 40:
+            new_hint = "Open your eyes and look at the camera."
+        elif focus < 60:
+            new_hint = "Maintain eye contact with the lens."
+        elif emotion < 30:
+            new_hint = "Try to relax and smile naturally."
+        elif confidence < 50:
+            new_hint = "Take a deep breath and stay calm."
+        elif focus >= 80 and emotion >= 60 and confidence >= 70:
+            new_hint = "Excellent! You're doing great."
+        elif focus >= 70:
+            new_hint = "Good eye contact. Keep it up!"
+        else:
+            new_hint = "You're doing well. Stay focused."
+        
+        # Only update if hint actually changed
+        if new_hint != self.current_hint:
+            self.current_hint = new_hint
+            self.hint_last_changed = current_time
+        
+        return self.current_hint
 
-def generate_hint(focus, emotion, confidence):
-    hints = []
-    if focus < 60: hints += ["Eye contact is key.", "Focus on the lens."]
-    if emotion < 30: hints += ["Smile to show warmth.", "Relax your face."]
-    if confidence < 50: hints += ["Steady your head.", "Breathe deeply."]
-    if not hints: hints = ["Perfect engagement.", "You're doing great.", "Maintain this vibe."]
-    return random.choice(hints)
 
 # Helper to process a base64 image
 def process_video_frame(base64_image, stabilizer: Stabilizer):
@@ -120,64 +174,90 @@ def process_video_frame(base64_image, stabilizer: Stabilizer):
         if frame is None:
             return None
 
-        # Optimization: Resize for faster processing if needed, but 1280x720 is fine for modern servers
-        # frame = cv2.resize(frame, (640, 360)) 
-
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         
-        # 1. Detection
-        faces = face_cascade.detectMultiScale(gray, 1.3, 5)
-        profiles = profile_cascade.detectMultiScale(gray, 1.3, 5) if len(faces) == 0 else []
+        # 1. Detection - tuned parameters for higher accuracy
+        faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=4, minSize=(80, 80))
+        profiles = profile_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=4) if len(faces) == 0 else []
         
         target_focus = 0.0
         target_emo = 0.0
         face_roi = None
+        num_eyes = 0
         
         if len(faces) > 0:
+            # Pick the largest face (most likely the primary subject)
+            faces = sorted(faces, key=lambda f: f[2]*f[3], reverse=True)
             (x, y, w, h) = faces[0]
             face_roi = (x, y, w, h)
             roi_gray = gray[y:y+h, x:x+w]
             
-            # Eyes
-            eyes = eye_cascade.detectMultiScale(roi_gray, 1.1, 5)
-            if len(eyes) >= 2: target_focus = 98.0
-            elif len(eyes) == 1: target_focus = 88.0
-            else: target_focus = 65.0 # Blinking?
+            # Eyes detection - stricter parameters
+            eyes = eye_cascade.detectMultiScale(roi_gray, scaleFactor=1.1, minNeighbors=4, minSize=(20, 20))
+            num_eyes = len(eyes)
+            stabilizer.update_eyes_history(num_eyes)
+            avg_eyes = stabilizer.get_average_eyes()
             
-            # Smile
-            smiles = smile_cascade.detectMultiScale(roi_gray, 1.7, 22)
-            if len(smiles) > 0: target_emo = 95.0
-            else: target_emo = 45.0 # Neutral baseline
+            # Focus score based on eye detection
+            # If eyes closed (avg < 1), focus drops significantly
+            if avg_eyes >= 1.8:  # Both eyes consistently visible
+                target_focus = 95.0
+            elif avg_eyes >= 1.0:  # One eye or intermittent
+                target_focus = 70.0
+            elif avg_eyes >= 0.5:  # Blinking or partial
+                target_focus = 45.0
+            else:  # Eyes closed
+                target_focus = 20.0
+            
+            # Smile detection
+            smiles = smile_cascade.detectMultiScale(roi_gray, scaleFactor=1.5, minNeighbors=18)
+            if len(smiles) > 0: 
+                target_emo = 85.0
+            else: 
+                target_emo = 45.0  # Neutral baseline
             
         elif len(profiles) > 0:
-            target_focus = 35.0 # Looking away
-            target_emo = 25.0
+            target_focus = 25.0  # Looking away
+            target_emo = 20.0
             (x,y,w,h) = profiles[0]
             face_roi = (x,y,w,h)
+            stabilizer.update_eyes_history(0)
         else:
-            target_focus = 10.0
+            target_focus = 10.0  # No face
             target_emo = 10.0
+            stabilizer.update_eyes_history(0)
 
         # 2. Stability Check (Optical Flow)
         stabilizer.check_stability(gray, face_roi)
         
-        # 3. Smooth & Hysteresis
-        stabilizer.internal_focus = stabilizer.smooth(stabilizer.internal_focus, target_focus, alpha=0.05)
-        stabilizer.internal_emotion = stabilizer.smooth(stabilizer.internal_emotion, target_emo, alpha=0.08)
+        # 3. Smooth with faster response for drops
+        stabilizer.internal_focus = stabilizer.smooth(stabilizer.internal_focus, target_focus, alpha=0.2)
+        stabilizer.internal_emotion = stabilizer.smooth(stabilizer.internal_emotion, target_emo, alpha=0.15)
         
         # Update Displayed State (Hysteresis applied)
         stabilizer.focus_score = stabilizer.get_ui_value(stabilizer.internal_focus, stabilizer.focus_score)
         stabilizer.emotion_score = stabilizer.get_ui_value(stabilizer.internal_emotion, stabilizer.emotion_score)
         
-        # Derived Metrics
-        conf_target = (stabilizer.focus_score * 0.6) + (stabilizer.emotion_score * 0.4)
-        if stabilizer.is_steady: conf_target += 5 # Bonus for stability
-        stabilizer.confidence_score = stabilizer.get_ui_value(conf_target, stabilizer.confidence_score)
+        # Confidence calculation - DIRECTLY tied to focus (eye detection)
+        # When eyes closed, confidence MUST drop
+        # Focus weight: 70%, Emotion: 20%, Steadiness: 10%
+        steady_bonus = 5 if stabilizer.is_steady else 0
+        conf_target = (stabilizer.focus_score * 0.70) + (stabilizer.emotion_score * 0.20) + steady_bonus
+        conf_target = min(100, max(0, conf_target))  # Clamp to 0-100
         
-        # Stress (Inverted conf)
-        stress = max(0, 100 - stabilizer.confidence_score)
+        # Apply smoothing to confidence with fast response for drops
+        if conf_target < stabilizer.confidence_score:
+            # Fast drop when focus/eyes drops
+            stabilizer.confidence_score = stabilizer.confidence_score * 0.7 + conf_target * 0.3
+        else:
+            # Slow rise
+            stabilizer.confidence_score = stabilizer.confidence_score * 0.9 + conf_target * 0.1
+        
+        # Stress - inverse of confidence
+        stress = max(5, min(95, 100 - stabilizer.confidence_score))
 
-        hint = generate_hint(stabilizer.focus_score, stabilizer.emotion_score, stabilizer.confidence_score)
+        # Get stabilized hint (with cooldown)
+        hint = stabilizer.update_hint(stabilizer.focus_score, stabilizer.emotion_score, stabilizer.confidence_score)
         
         return {
             "focus": int(stabilizer.focus_score),

@@ -1,22 +1,49 @@
-import React, { useState } from 'react';
-import { Activity, Smile, Brain } from 'lucide-react';
-import { motion } from 'framer-motion';
-import { API_ENDPOINTS, WS_ENDPOINTS } from '../../config/api';
+import React, { useState, useRef, useCallback } from 'react';
+import { Activity, Smile, Brain, Hand, Sparkles } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import Webcam from 'react-webcam';
+import { WS_ENDPOINTS } from '../../config/api';
+import { AIAssistanceBadge } from '../AIAssistanceBadge';
 
 interface VideoAnalysisProps {
     onReady?: () => void;
+    isAISpeaking?: boolean;
+    isUserSpeaking?: boolean;
+    currentHint?: string | null;
 }
 
-export const VideoAnalysis: React.FC<VideoAnalysisProps> = ({ onReady }) => {
-    const [streamUrl] = useState(API_ENDPOINTS.stream);
+export const VideoAnalysis: React.FC<VideoAnalysisProps> = ({ 
+    onReady, 
+    isAISpeaking = false, 
+    isUserSpeaking = false,
+    currentHint = null 
+}) => {
+    const webcamRef = useRef<Webcam>(null);
+    const wsRef = useRef<WebSocket | null>(null);
     const [elapsed, setElapsed] = useState(0);
-    const [analysis, setAnalysis] = useState({
-        focus: 0,
-        emotion: 0,
-        confidence: 0,
-        stress: 0,
-        hint: "Connecting to AI...",
+    const [isConnected, setIsConnected] = useState(false);
+    
+    // Smoothed metrics state with exponential moving average
+    const [smoothedMetrics, setSmoothedMetrics] = useState({
+        focus: 50,
+        emotion: 50,
+        confidence: 50,
+        stress: 50,
     });
+    const [analysis, setAnalysis] = useState({
+        focus: 50,
+        emotion: 50,
+        confidence: 50,
+        stress: 50,
+        hint: "Initializing camera...",
+    });
+    
+    // Smoothing factor (0.3 = 30% new value, 70% old value)
+    const SMOOTHING_FACTOR = 0.3;
+    
+    // Apply exponential moving average for smoother transitions
+    const smoothValue = (oldVal: number, newVal: number) => 
+        Math.round(oldVal * (1 - SMOOTHING_FACTOR) + newVal * SMOOTHING_FACTOR);
 
     // Timer effect
     React.useEffect(() => {
@@ -35,30 +62,71 @@ export const VideoAnalysis: React.FC<VideoAnalysisProps> = ({ onReady }) => {
         return () => window.removeEventListener('keydown', handleEsc);
     }, []);
 
+    // WebSocket connection and frame sending
     React.useEffect(() => {
         if (onReady) onReady();
         
         const ws = new WebSocket(WS_ENDPOINTS.metrics);
+        wsRef.current = ws;
+        
+        ws.onopen = () => {
+            console.log("WebSocket connected for video analysis");
+            setIsConnected(true);
+            setAnalysis(prev => ({ ...prev, hint: "AI connected. Look at the camera!" }));
+        };
         
         ws.onmessage = (event) => {
             try {
                 const data = JSON.parse(event.data);
-                setAnalysis({
-                    focus: data.focus,
-                    emotion: data.emotion,
-                    confidence: data.confidence,
-                    stress: data.stress,
-                    hint: data.hint
-                });
+                // Apply smoothing to metrics for natural transitions
+                setSmoothedMetrics(prev => ({
+                    focus: smoothValue(prev.focus, data.focus || 0),
+                    emotion: smoothValue(prev.emotion, data.emotion || 0),
+                    confidence: smoothValue(prev.confidence, data.confidence || 0),
+                    stress: smoothValue(prev.stress, data.stress || 0),
+                }));
+                setAnalysis(prev => ({
+                    ...prev,
+                    hint: data.hint || "Analyzing..."
+                }));
             } catch (e) {
                 console.error("Metric Parse Error", e);
             }
         };
         
+        ws.onerror = (error) => {
+            console.error("WebSocket error:", error);
+            setAnalysis(prev => ({ ...prev, hint: "Connection error. Retrying..." }));
+        };
+        
+        ws.onclose = () => {
+            console.log("WebSocket closed");
+            setIsConnected(false);
+        };
+        
         return () => {
-            ws.close();
+            if (wsRef.current) {
+                wsRef.current.close();
+            }
         };
     }, [onReady]);
+
+    // Capture and send frames at interval
+    const captureFrame = useCallback(() => {
+        if (webcamRef.current && wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+            const imageSrc = webcamRef.current.getScreenshot();
+            if (imageSrc) {
+                // Send base64 image to backend
+                wsRef.current.send(imageSrc);
+            }
+        }
+    }, []);
+
+    // Send frames every 100ms (10 FPS) for analysis
+    React.useEffect(() => {
+        const frameInterval = setInterval(captureFrame, 100);
+        return () => clearInterval(frameInterval);
+    }, [captureFrame]);
 
     // Format time as MM:SS
     const formatTime = (seconds: number) => {
@@ -71,64 +139,101 @@ export const VideoAnalysis: React.FC<VideoAnalysisProps> = ({ onReady }) => {
         <div className="flex flex-col h-full gap-4">
              {/* Main Video Card */}
             <div className="relative flex-1 rounded-2xl overflow-hidden bg-black/40 border border-border/30 shadow-2xl backdrop-blur-sm group">
-                <img 
-                    src={streamUrl}
-                    alt="Live AI Video Feed"
+                <Webcam
+                    ref={webcamRef}
+                    audio={false}
+                    screenshotFormat="image/jpeg"
+                    videoConstraints={{
+                        width: 1280,
+                        height: 720,
+                        facingMode: "user"
+                    }}
                     className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity"
-                    onError={() => console.log("Video stream connection lost - camera released")}
+                    mirrored={true}
                 />
                 
                 {/* Left: LIVE indicator */}
                 <div className="absolute top-4 left-4">
-                    <div className="bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 flex items-center gap-2 text-xs font-medium text-emerald-400">
+                    <div className={`backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 flex items-center gap-2 text-xs font-medium ${isConnected ? 'bg-black/60 text-emerald-400' : 'bg-red-900/60 text-red-400'}`}>
                         <span className="relative flex h-2 w-2">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                          <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                          <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${isConnected ? 'bg-emerald-400' : 'bg-red-400'} opacity-75`}></span>
+                          <span className={`relative inline-flex rounded-full h-2 w-2 ${isConnected ? 'bg-emerald-500' : 'bg-red-500'}`}></span>
                         </span>
-                        LIVE
+                        {isConnected ? 'LIVE' : 'CONNECTING'}
                     </div>
                 </div>
                 
-                {/* Right: Timestamp */}
-                <div className="absolute top-4 right-4">
+                {/* Right: AI Badge + Timestamp */}
+                <div className="absolute top-4 right-4 flex items-center gap-3">
+                    <AIAssistanceBadge isConnected={isConnected} />
                     <div className="bg-emerald-600 backdrop-blur-md px-4 py-2 rounded-full flex items-center gap-2 text-sm font-bold text-white font-mono shadow-lg">
                         {formatTime(elapsed)}
                     </div>
                 </div>
 
-                {/* Floating Hint */}
-                 <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-3/4 max-w-sm">
+                {/* Dynamic Overlay Messages */}
+                {/* Dynamic Overlay Messages - Centered Dark Capsule Style */}
+                <AnimatePresence mode="wait">
                     <motion.div 
-                        initial={{ y: 20, opacity: 0 }}
-                        animate={{ y: 0, opacity: 1 }}
-                        className="bg-black/60 backdrop-blur-md rounded-xl p-4 border border-white/10 text-center shadow-lg"
+                        key={isAISpeaking ? 'ai' : isUserSpeaking ? 'user' : 'hint'}
+                        initial={{ scale: 0.9, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        exit={{ scale: 0.9, opacity: 0 }}
+                        className="absolute bottom-6 left-1/2 -translate-x-1/2 w-auto max-w-md z-20"
                     >
-                        <p className="text-sm font-medium text-blue-100">
-                            ✨ {analysis.hint}
-                        </p>
+                        {isAISpeaking ? (
+                            <div className="bg-neutral-900/90 backdrop-blur-md rounded-2xl px-6 py-3 shadow-xl flex items-center gap-3 border border-white/5">
+                                <span className="text-blue-400 animate-pulse"><Activity size={18} /></span>
+                                <p className="text-sm font-medium text-white tracking-wide">
+                                    AI is speaking... Listen carefully
+                                </p>
+                            </div>
+                        ) : isUserSpeaking ? (
+                            <div className="bg-neutral-900/90 backdrop-blur-md rounded-2xl px-6 py-3 shadow-xl flex items-center gap-3 border border-white/5">
+                                <span className="text-emerald-400"><Hand size={18} /></span>
+                                <div className="flex flex-col">
+                                    <p className="text-sm font-medium text-white tracking-wide">
+                                        Maintain good posture
+                                    </p>
+                                    <p className="text-[10px] text-zinc-400 font-medium">Keep eye contact • Speak clearly</p>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="bg-neutral-900/90 backdrop-blur-md rounded-2xl px-6 py-3 shadow-xl flex items-center gap-3 border border-white/5">
+                                <span className="text-orange-400 animate-pulse"><Sparkles size={18} /></span>
+                                <div className="flex flex-col">
+                                    <p className="text-sm font-medium text-white tracking-wide">
+                                        Your turn to speak
+                                    </p>
+                                    {currentHint && (
+                                        <p className="text-[10px] text-zinc-300 mt-0.5 max-w-[200px] leading-tight">{currentHint}</p>
+                                    )}
+                                </div>
+                            </div>
+                        )}
                     </motion.div>
-                </div>
+                </AnimatePresence>
             </div>
 
-            {/* Metrics Panel */}
+            {/* Metrics Panel - Using smoothed values */}
             <div className="grid grid-cols-3 gap-3">
                  <MetricCard 
                     label="Emotion" 
-                    value={analysis.emotion} 
+                    value={smoothedMetrics.emotion} 
                     icon={<Smile size={14} />} 
                     color="text-yellow-400" 
                     barColor="bg-yellow-400" 
                 />
                  <MetricCard 
                     label="Focus" 
-                    value={analysis.focus} 
+                    value={smoothedMetrics.focus} 
                     icon={<Activity size={14} />} 
                     color="text-blue-400" 
                     barColor="bg-blue-400" 
                 />
                  <MetricCard 
                     label="Confidence" 
-                    value={analysis.confidence} 
+                    value={smoothedMetrics.confidence} 
                     icon={<Brain size={14} />} 
                     color="text-purple-400" 
                     barColor="bg-purple-400" 
@@ -138,7 +243,15 @@ export const VideoAnalysis: React.FC<VideoAnalysisProps> = ({ onReady }) => {
     );
 };
 
-const MetricCard = ({ label, value, icon, color, barColor }: any) => (
+interface MetricCardProps {
+    label: string;
+    value: number;
+    icon: React.ReactNode;
+    color: string;
+    barColor: string;
+}
+
+const MetricCard = ({ label, value, icon, color, barColor }: MetricCardProps) => (
     <div className="bg-card/50 border border-border/50 rounded-xl p-3 flex flex-col gap-2 backdrop-blur-sm">
         <div className="flex items-center justify-between text-xs text-muted-foreground font-medium">
             <span className="flex items-center gap-1.5">{icon} {label}</span>
@@ -148,7 +261,7 @@ const MetricCard = ({ label, value, icon, color, barColor }: any) => (
             <motion.div
                 initial={{ width: 0 }}
                 animate={{ width: `${value}%` }}
-                transition={{ duration: 1, ease: "easeOut" }}
+                transition={{ duration: 0.5, ease: "easeOut" }}
                 className={`h-full ${barColor} rounded-full`}
             />
         </div>

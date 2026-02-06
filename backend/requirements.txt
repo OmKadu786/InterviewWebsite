@@ -7,10 +7,4 @@ python-dotenv
 python-multipart
 pydantic
 websockets
-opencv-python
-numpy
-
-# New for HireByte v2.0
-sentence-transformers
-scikit-learn
-textblob
+opencv-python-headless

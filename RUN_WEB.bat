@@ -11,7 +11,7 @@ taskkill /F /IM node.exe >nul 2>&1
 timeout /t 1 /nobreak >nul
 
 echo 1. Launching Backend Server...
-start "RIPIS Backend" /min cmd /k "cd backend && python main.py"
+start "RIPIS Backend" /min cmd /k "cd backend && call venv\Scripts\activate && python main.py"
 
 echo 2. Launching Frontend Server...
 start "RIPIS Frontend" /min cmd /k "cd frontend && npm run dev"

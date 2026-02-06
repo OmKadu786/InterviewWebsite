@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Send, X, Mic, MicOff } from 'lucide-react';
+import { Send, Mic, MicOff } from 'lucide-react';
 import { AudioPlayer } from './AudioPlayer';
 import { API_ENDPOINTS, WS_ENDPOINTS } from '../../config/api';
 
@@ -8,7 +8,13 @@ interface Message {
   text: string;
 }
 
-export function ChatBox({ onEnd }: { onEnd: () => void }) {
+interface ChatBoxProps {
+  onEnd: () => void;
+  onAISpeakingChange?: (speaking: boolean) => void;
+  onUserSpeakingChange?: (speaking: boolean) => void;
+}
+
+export function ChatBox({ onEnd, onAISpeakingChange, onUserSpeakingChange }: ChatBoxProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState("");
   const [currentAudio, setCurrentAudio] = useState<string | null>(null);
@@ -40,7 +46,14 @@ export function ChatBox({ onEnd }: { onEnd: () => void }) {
         const data = JSON.parse(event.data);
         if (data.type === 'ai_turn') {
           setMessages(prev => [...prev, { role: 'ai', text: data.text }]);
-          if (data.audio) setCurrentAudio(data.audio);
+          if (data.audio) {
+            setCurrentAudio(data.audio);
+            // Notify parent that AI is speaking
+            onAISpeakingChange?.(true);
+            // Auto-clear after estimated speaking time (3s per 50 chars)
+            const speakDuration = Math.max(3000, (data.text.length / 50) * 3000);
+            setTimeout(() => onAISpeakingChange?.(false), speakDuration);
+          }
         }
       } catch (e) {
         console.error("Error parsing WS message:", e);
@@ -68,6 +81,7 @@ export function ChatBox({ onEnd }: { onEnd: () => void }) {
     if (isRecording) {
       mediaRecorderRef.current?.stop();
       setIsRecording(false);
+      onUserSpeakingChange?.(false);
     } else {
       const recorder = new MediaRecorder(mediaStream);
       audioChunksRef.current = [];
@@ -84,6 +98,7 @@ export function ChatBox({ onEnd }: { onEnd: () => void }) {
       recorder.start();
       mediaRecorderRef.current = recorder;
       setIsRecording(true);
+      onUserSpeakingChange?.(true);
     }
   };
 
@@ -134,7 +149,7 @@ export function ChatBox({ onEnd }: { onEnd: () => void }) {
       <div className="flex flex-1 min-h-0">
         {/* Chat Area */}
         <div className="flex-1 flex flex-col min-w-0">
-          <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 scroll-smooth">
+          <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 scroll-smooth chat-scroll">
             {messages.length === 0 && (
                 <div className="flex items-center justify-center h-full opacity-30 text-center text-sm">
                     AI conversation will appear here...

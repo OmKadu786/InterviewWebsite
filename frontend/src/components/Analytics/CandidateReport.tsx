@@ -168,13 +168,29 @@ export function CandidateReport() {
     { name: 'Average', score: 65 }
   ];
 
+  // Enhanced weighted scoring for more accurate predictions
+  // Weights: Communication (25%), Confidence (25%), Technical (20%), Focus (15%), EQ (15%)
+  const weights = {
+    communication: 0.25,
+    confidence: 0.25,
+    technical: 0.20,
+    focus: 0.15,
+    emotional_intelligence: 0.15
+  };
+  
   const overallScore = Math.round(
-    (analytics.radar_chart_data.technical_accuracy +
-      analytics.radar_chart_data.communication +
-      analytics.radar_chart_data.confidence +
-      analytics.radar_chart_data.focus +
-      analytics.radar_chart_data.emotional_intelligence) / 5
+    analytics.radar_chart_data.communication * weights.communication +
+    analytics.radar_chart_data.confidence * weights.confidence +
+    analytics.radar_chart_data.technical_accuracy * weights.technical +
+    analytics.radar_chart_data.focus * weights.focus +
+    analytics.radar_chart_data.emotional_intelligence * weights.emotional_intelligence
   );
+  
+  // Apply sample size penalty for short interviews (less reliable scores)
+  const sampleCount = analytics.vision_analytics.per_question_metrics?.length || 0;
+  const adjustedScore = sampleCount < 3 
+    ? Math.round(overallScore * 0.9) // 10% penalty for very short interviews
+    : overallScore;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">

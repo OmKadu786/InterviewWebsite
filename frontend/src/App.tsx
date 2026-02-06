@@ -1,11 +1,14 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { ThemeProvider } from './context/ThemeContext';
 import { Layout } from './components/Layout/Layout';
 import { VideoAnalysis } from './components/VideoInterview/VideoAnalysis';
 import { ChatBox } from './components/Interview/ChatBox';
 import { FileUpload } from './components/FileUpload';
 import { CandidateReport } from './components/Analytics/CandidateReport';
-import { Sparkles, Loader2, ArrowRight } from 'lucide-react';
+import { ConsentModal } from './components/ConsentModal';
+import { WelcomeModal } from './components/WelcomeModal';
+import { HintLevelButtons, HintLevel } from './components/HintLevelButtons';
+import { Sparkles, Loader2, ArrowRight, Lightbulb } from 'lucide-react';
 import { Hero } from './components/Home/Hero';
 import { API_ENDPOINTS } from './config/api';
 
@@ -17,13 +20,95 @@ function App() {
   const [jobDescription, setJobDescription] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
+  const [showConsentModal, setShowConsentModal] = useState(false);
+  const [consentGiven, setConsentGiven] = useState(() => {
+    // Check if user has previously given consent
+    return localStorage.getItem('aiConsent') === 'true';
+  });
+  const [showWelcomeModal, setShowWelcomeModal] = useState(() => {
+    // Show welcome modal if user hasn't agreed yet
+    return localStorage.getItem('welcomeConsent') !== 'true';
+  });
+  
+  // Speaking state management for overlay messages
+  const [isAISpeaking, setIsAISpeaking] = useState(false);
+  const [isUserSpeaking, setIsUserSpeaking] = useState(false);
+  const [currentHint, setCurrentHint] = useState<string | null>(null);
+  const [hintLoading, setHintLoading] = useState(false);
+  
+  // Callbacks for ChatBox to update speaking states
+  const handleAISpeakingChange = useCallback((speaking: boolean) => {
+    setIsAISpeaking(speaking);
+  }, []);
+  
+  const handleUserSpeakingChange = useCallback((speaking: boolean) => {
+    setIsUserSpeaking(speaking);
+  }, []);
+  
+  // Handle hint requests - connects to LLM backend
+  const handleHintRequest = async (level: HintLevel, prompt: string) => {
+    setHintLoading(true);
+    try {
+      // Call backend for contextual LLM-based hints
+      const response = await fetch(API_ENDPOINTS.getHint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: prompt, level })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setCurrentHint(data.hint || 'Focus on your relevant experience.');
+      } else {
+        // Fallback hints if API fails
+        const fallbackHints = {
+          small: "Focus on the key skills mentioned in your resume.",
+          medium: "Structure your answer: Situation, Task, Action, Result.",
+          full: "Provide specific examples from your experience that match the job requirements."
+        };
+        setCurrentHint(fallbackHints[level]);
+      }
+      // Auto-clear after 45 seconds
+      setTimeout(() => setCurrentHint(null), 45000);
+    } catch (error) {
+      console.error('Hint request error:', error);
+      setCurrentHint("Consider your relevant experience for this question.");
+    } finally {
+      setHintLoading(false);
+    }
+  };
 
-  const handleStartInterview = async () => {
+  // Handle the initial click on "Start Interview" - shows consent if not given
+  const handleStartInterviewClick = () => {
     if (!selectedFile || !jobDescription) return;
+    
+    // If consent was already given (from localStorage), proceed directly
+    if (consentGiven) {
+      proceedWithInterview();
+    } else {
+      // Show consent modal first
+      setShowConsentModal(true);
+    }
+  };
+
+  // Called when user agrees in consent modal
+  const handleConsentAgree = () => {
+    setConsentGiven(true);
+    setShowConsentModal(false);
+    proceedWithInterview();
+  };
+
+  // Called when user cancels consent
+  const handleConsentCancel = () => {
+    setShowConsentModal(false);
+  };
+
+  // Actually start the interview (camera/mic start here)
+  const proceedWithInterview = async () => {
     setIsSubmitting(true);
     try {
       const formData = new FormData();
-      formData.append('file', selectedFile);
+      formData.append('file', selectedFile!);
       formData.append('job_description', jobDescription);
       formData.append('difficulty', difficulty);
 
@@ -60,7 +145,15 @@ function App() {
   return (
     <ThemeProvider>
         <Layout onDone={handleEndInterview} showDoneButton={view === 'interview'}>
-            {view === 'landing' && <Hero onStartConfirm={() => setView('setup')} />}
+            {view === 'landing' && (
+              <>
+                <Hero onStartConfirm={() => setView('setup')} />
+                <WelcomeModal 
+                  isOpen={showWelcomeModal} 
+                  onAgree={() => setShowWelcomeModal(false)} 
+                />
+              </>
+            )}
             
             {view === 'setup' && (
                 <div className="flex items-center justify-center min-h-[calc(100vh-4rem)] p-4">
@@ -111,7 +204,7 @@ function App() {
                             </div>
 
                             <button
-                                onClick={handleStartInterview}
+                                onClick={handleStartInterviewClick}
                                 disabled={!selectedFile || !jobDescription || isSubmitting}
                                 className="w-full py-3 bg-gradient-to-r from-hirebyte-blue to-hirebyte-blue-light text-white font-semibold rounded-xl flex items-center justify-center gap-2 hover:from-hirebyte-mint hover:to-emerald-500 transition-all duration-300 disabled:opacity-50"
                             >
@@ -146,20 +239,40 @@ function App() {
 
                              <div className="p-3 bg-secondary/50 rounded-xl text-sm border border-border/50 flex-1 overflow-hidden flex flex-col">
                                 <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-2">Job Description</span>
-                                <p className="text-muted-foreground text-xs leading-relaxed overflow-y-auto whitespace-pre-wrap">
+                                <p className="text-muted-foreground text-xs leading-relaxed overflow-y-auto whitespace-pre-wrap flex-1">
                                     {jobDescription || "No description provided."}
                                 </p>
+                            </div>
+                            
+                            {/* Hints Section */}
+                            <div className="mt-auto">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <Lightbulb size={14} className="text-yellow-400" />
+                                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">AI Hints</span>
+                                </div>
+                                <HintLevelButtons 
+                                    onRequestHint={handleHintRequest}
+                                    isLoading={hintLoading}
+                                />
                             </div>
                         </div>
                         
                         {/* Center Panel: Video Stream */}
                         <div className="lg:col-span-6 h-full flex flex-col">
-                             <VideoAnalysis />
+                             <VideoAnalysis 
+                                isAISpeaking={isAISpeaking}
+                                isUserSpeaking={isUserSpeaking}
+                                currentHint={currentHint}
+                             />
                         </div>
                         
                         {/* Right Panel: Chat */}
                         <div className="lg:col-span-3 h-full">
-                            <ChatBox onEnd={handleEndInterview} />
+                            <ChatBox 
+                                onEnd={handleEndInterview}
+                                onAISpeakingChange={handleAISpeakingChange}
+                                onUserSpeakingChange={handleUserSpeakingChange}
+                            />
                         </div>
 
                     </div>
@@ -177,8 +290,15 @@ function App() {
                         </button>
                         <CandidateReport />
                     </div>
-                </div>
-            )}
+                    </div>
+                )}
+
+            {/* Consent Modal */}
+            <ConsentModal
+                isOpen={showConsentModal}
+                onAgree={handleConsentAgree}
+                onCancel={handleConsentCancel}
+            />
         </Layout>
     </ThemeProvider>
   );
