@@ -8,7 +8,7 @@
 Stop practicing in silence. Speak with an AI that listens, watches, and guides you to success.
 
 ## ✨ Key Features
-- **🎙️ Voice-First Interaction**: Natural, conversational interview flow using advanced Speech-to-Text and Text-to-Speech (ElevenLabs).
+- **🎙️ Voice-First Interaction**: Natural, conversational interview flow using advanced Speech-to-Text (Whisper) and Text-to-Speech (OpenAI GPT-4o Audio).
 - **👁️ Emotion & Confidence Analysis**: Real-time face tracking detects user emotions (stress, focus, confidence) to provide holistic feedback.
 - **🧠 Context-Aware AI**: Upload your resume and job description to get a tailored interview experience powered by LLMs.
 - **⚡ Real-time Feedback**: Instant transcription and response generation.
@@ -16,14 +16,14 @@ Stop practicing in silence. Speak with an AI that listens, watches, and guides y
 ## 🛠️ Tech Stack
 - **Frontend**: React, TypeScript, Tailwind CSS, Vite.
 - **Backend**: Python, FastAPI, WebSockets.
-- **AI Services**: OpenAI (LLM), ElevenLabs (Voice), Whisper (Transcription).
+- **AI Services**: OpenAI (LLM, Voice, Transcription).
 
 ## 🏃‍♂️ Getting Started
 
 ### Prerequisites
 - Node.js & npm
 - Python 3.8+
-- API Keys for OpenAI & ElevenLabs
+- API Key for OpenAI
 
 ### 1. Backend Setup
 The backend handles the AI logic, voice processing, and PDF parsing.
@@ -34,10 +34,8 @@ python3 -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 
-# Create a .env file with your keys:
+# Create a .env file with your key:
 # OPENAI_API_KEY=...
-# ELEVENLABS_API_KEY=...
-# VOICE_ID=pNInz6obpgDQGcFmaJgB (Adam)
 
 uvicorn main:app --reload --port 8000
 OR
