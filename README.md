@@ -40,6 +40,8 @@ pip install -r requirements.txt
 # VOICE_ID=pNInz6obpgDQGcFmaJgB (Adam)
 
 uvicorn main:app --reload --port 8000
+OR
+python main.py
 ```
 
 ### 2. Frontend Setup

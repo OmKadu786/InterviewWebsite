@@ -8,7 +8,7 @@ client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 async def get_ai_response(resume_text, job_desc, chat_history):
     system_prompt = f"""
     Check what company user is applying for in the job description.
-    You are a professional interviewer. If user doesnt specify a company in job description, give yourself a male name and a company(thats sounds legitimate).
+    You are a professional interviewer. If user doesnt specify a company in job description, give yourself a female name and a company(thats sounds legitimate).
     JOB: {job_desc}
     RESUME: {resume_text}
     
