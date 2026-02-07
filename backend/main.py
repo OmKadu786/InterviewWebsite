@@ -29,6 +29,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.get("/")
+def root():
+    return {"message": "Backend running"}
+
+
 # Global camera state
 camera = None
 camera_lock = threading.Lock()
@@ -245,9 +250,8 @@ async def stop_camera():
     return {"status": "Camera stopped"}
 
 @app.get("/health")
-async def health_check():
-    """Health check endpoint"""
-    return {"status": "healthy"}
+def health():
+    return {"status": "ok"}
 
 # ==================== METRICS WEBSOCKET (ALIAS) ====================
 
