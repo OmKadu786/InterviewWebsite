@@ -26,7 +26,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-session_data = {"resume_text": "", "job_description": "", "hint_level": 0}
+session_data = {"resume_text": "", "job_description": "", "hint_level": 0, "difficulty": "Medium"}
 
 class HintRequest(BaseModel):
     question: str
@@ -71,7 +71,7 @@ async def generate_report(request: ReportRequest):
 async def prepare_initial_greeting(resume_text: str, job_description: str):
     print("Starting background greeting generation...")
     # 1. Generate text
-    greeting_text = await get_ai_response(resume_text, job_description, [])
+    greeting_text = await get_ai_response(resume_text, job_description, [], session_data.get("difficulty", "Medium"))
     session_data["greeting_text"] = greeting_text
     print(f"Greeting text generated: {greeting_text[:50]}...")
     
@@ -82,11 +82,12 @@ async def prepare_initial_greeting(resume_text: str, job_description: str):
     print("Greeting audio generated and cached.")
 
 @app.post("/upload-resume")
-async def upload_resume(background_tasks: BackgroundTasks, file: UploadFile = File(...), job_description: str = Form(...)):
+async def upload_resume(background_tasks: BackgroundTasks, file: UploadFile = File(...), job_description: str = Form(...), difficulty: str = Form(...)):
     pdf_bytes = await file.read()
     text = extract_text_from_pdf(pdf_bytes)
     session_data["resume_text"] = text
     session_data["job_description"] = job_description
+    session_data["difficulty"] = difficulty
     
     # Trigger background generation of opening lines
     background_tasks.add_task(prepare_initial_greeting, text, job_description)
@@ -140,7 +141,8 @@ async def interview_websocket(websocket: WebSocket):
             greeting_text = await get_ai_response(
                 session_data["resume_text"], 
                 session_data["job_description"],
-                chat_history
+                chat_history,
+                session_data.get("difficulty", "Medium")
             )
             audio_bytes = generate_audio(greeting_text)
             
@@ -174,7 +176,8 @@ async def interview_websocket(websocket: WebSocket):
                 ai_reply = await get_ai_response(
                     session_data["resume_text"],
                     session_data["job_description"],
-                    chat_history
+                    chat_history,
+                    session_data.get("difficulty", "Medium")
                 )
                 
                 chat_history.append({"role": "assistant", "content": ai_reply})

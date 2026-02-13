@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Sparkles, Download, Share2, RotateCcw, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
+import html2pdf from 'html2pdf.js';
 import { API_BASE_URL } from '../../config';
 
 interface ReportProps {
@@ -49,6 +50,57 @@ export function Report({ onRestart, chatHistory, jobDescription }: ReportProps) 
         fetchReport();
     }, [chatHistory, jobDescription]);
 
+    const handleDownloadPDF = () => {
+        const element = document.getElementById('report-content');
+        const opt = {
+            margin: 1,
+            filename: 'interview-report.pdf',
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2, useCORS: true },
+            jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+        };
+        // @ts-ignore
+        html2pdf().set(opt).from(element).save();
+    };
+
+    const handleShare = async () => {
+        if (!reportData) return;
+
+        const shareData = {
+            title: 'My Interview Result',
+            text: `I just completed an AI interview with a score of ${reportData.score}/100!`,
+            url: window.location.href
+        };
+
+        const copyToClipboard = async () => {
+            try {
+                await navigator.clipboard.writeText(`${shareData.text}\n${shareData.url}`);
+                alert('Result copied to clipboard!');
+            } catch (clipboardErr) {
+                console.error('Clipboard failed:', clipboardErr);
+                alert('Could not share or copy to clipboard.');
+            }
+        };
+
+        try {
+            if (navigator.share) {
+                try {
+                    await navigator.share(shareData);
+                } catch (shareErr) {
+                    if ((shareErr as Error).name !== 'AbortError') {
+                        console.error('Share API failed, trying clipboard:', shareErr);
+                        await copyToClipboard();
+                    }
+                }
+            } else {
+                await copyToClipboard();
+            }
+        } catch (err) {
+            console.error('General share error:', err);
+            alert('Something went wrong with sharing.');
+        }
+    };
+
     if (loading) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-6">
@@ -82,7 +134,7 @@ export function Report({ onRestart, chatHistory, jobDescription }: ReportProps) 
     if (!reportData) return null;
 
     return (
-        <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in duration-500">
+        <div id="report-content" className="max-w-4xl mx-auto space-y-8 animate-in fade-in duration-500">
 
             {/* Header Section */}
             <div className="text-center space-y-4">
@@ -194,11 +246,17 @@ export function Report({ onRestart, chatHistory, jobDescription }: ReportProps) 
                     <RotateCcw className="w-4 h-4" />
                     Start New Interview
                 </button>
-                <button className="px-6 py-3 bg-[#161616] text-white font-semibold rounded-xl border border-white/10 hover:bg-white/5 transition-colors flex items-center gap-2">
+                <button
+                    onClick={handleDownloadPDF}
+                    className="px-6 py-3 bg-[#161616] text-white font-semibold rounded-xl border border-white/10 hover:bg-white/5 transition-colors flex items-center gap-2"
+                >
                     <Download className="w-4 h-4" />
                     Download PDF
                 </button>
-                <button className="px-6 py-3 bg-[#161616] text-white font-semibold rounded-xl border border-white/10 hover:bg-white/5 transition-colors flex items-center gap-2">
+                <button
+                    onClick={handleShare}
+                    className="px-6 py-3 bg-[#161616] text-white font-semibold rounded-xl border border-white/10 hover:bg-white/5 transition-colors flex items-center gap-2"
+                >
                     <Share2 className="w-4 h-4" />
                     Share Result
                 </button>

@@ -5,13 +5,25 @@ from dotenv import load_dotenv
 load_dotenv()
 client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-async def get_ai_response(resume_text, job_desc, chat_history):
+async def get_ai_response(resume_text, job_desc, chat_history, difficulty="Medium"):
+    
+    # Define difficulty-specific instructions
+    difficulty_instruction = ""
+    if difficulty == "Easy":
+        difficulty_instruction = "DIFFICULTY MODE: EASY. Ask fundamental, basic questions. Focus on definitions and core concepts. Be encouraging and helpful."
+    elif difficulty == "Medium":
+        difficulty_instruction = "DIFFICULTY MODE: MEDIUM. Ask standard interview questions. Functionality, problem-solving, and common scenarios."
+    elif difficulty == "Hard":
+        difficulty_instruction = "DIFFICULTY MODE: HARD. Ask complex, deep technical questions. Challenge the user with edge cases, system design, and scalability problems. Be strict and exacting."
+
     system_prompt = f"""
     Check what company user is applying for in the job description.
     You are a professional interviewer. If user doesnt specify a company in job description, give yourself a female name and a company(thats sounds legitimate).
     JOB: {job_desc}
     RESUME: {resume_text}
     
+    {difficulty_instruction}
+
     STAGES:
     1. First introduce yourself. Along with your position in the company. Call the user by their full name(if given in the resumé) and let the first question always be for the user/person/interviewee to introduce themselves.
     2. Move to technical and non-technical questions based on the resume.
