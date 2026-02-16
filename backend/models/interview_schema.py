@@ -66,3 +66,15 @@ class InterviewReport(BaseModel):
     interview_number: int  # User's nth interview
     previous_score: Optional[float] = None
     improvement_percentage: Optional[float] = None
+    
+    # Feature 1/3: Hint tracking
+    hint_usage: Optional[Dict[str, List[str]]] = None  # {question_index: [levels_used]}
+    
+    # Feature 3: Per-question timing
+    time_per_question: Optional[Dict[str, float]] = None  # {question_index: seconds}
+    
+    # Feature 2/3: Logical errors
+    logical_errors: Optional[List[Dict[str, Any]]] = None  # [{question_index, issue_type, feedback, severity}]
+    
+    # Feature 1: Topic classifications
+    topic_classifications: Optional[Dict[str, str]] = None  # {question_index: "DSA"|"OS"|...}

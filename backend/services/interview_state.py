@@ -1,3 +1,5 @@
+import time
+
 class InterviewState:
     """
     Tracks interview progress through the predefined plan.
@@ -13,6 +15,18 @@ class InterviewState:
         self.answer_scores = []  # [{question, category, accuracy, depth, clarity, topic}, ...]
         self.is_complete = False
         self.current_question_text = ""  # Track the last question asked
+        
+        # Feature 1: Progressive hint tracking
+        self.hint_usage = {}  # {question_index: [levels_used]}
+        
+        # Feature 3: Per-question timing
+        self.question_timestamps = {}  # {question_index: {"asked_at": float, "answered_at": float}}
+        
+        # Feature 2/3: Logical error tracking
+        self.logical_errors = []  # [{question_index, issue_type, feedback, severity}, ...]
+        
+        # Feature 1: Topic classification per question
+        self.question_topics = {}  # {question_index: "DSA"|"OS"|...}
     
     def get_current_step(self) -> dict | None:
         """
@@ -78,6 +92,67 @@ class InterviewState:
             "average": round((accuracy + depth + clarity) / 3, 1)
         })
         self.asked_topics.add(topic.lower())
+    
+    # --- Feature 1: Hint progression ---
+    
+    def get_available_hint_level(self, question_index: int) -> str:
+        """
+        Returns the next allowed hint level for a given question.
+        Enforces progression: small → medium → full.
+        Returns None if all levels have been used.
+        """
+        used = self.hint_usage.get(question_index, [])
+        if "small" not in used:
+            return "small"
+        elif "medium" not in used:
+            return "medium"
+        elif "full" not in used:
+            return "full"
+        return None  # All hints exhausted
+    
+    def record_hint_used(self, question_index: int, level: str):
+        """Record that a hint was used for a question."""
+        if question_index not in self.hint_usage:
+            self.hint_usage[question_index] = []
+        if level not in self.hint_usage[question_index]:
+            self.hint_usage[question_index].append(level)
+    
+    def get_hint_count(self) -> int:
+        """Total hints used across all questions."""
+        return sum(len(levels) for levels in self.hint_usage.values())
+    
+    # --- Feature 3: Timing ---
+    
+    def mark_question_asked(self, question_index: int):
+        """Record when a question was asked."""
+        self.question_timestamps[question_index] = {
+            "asked_at": time.time(),
+            "answered_at": None
+        }
+    
+    def mark_question_answered(self, question_index: int):
+        """Record when a question was answered."""
+        if question_index in self.question_timestamps:
+            self.question_timestamps[question_index]["answered_at"] = time.time()
+    
+    def get_time_taken(self, question_index: int) -> float:
+        """Get time taken for a question in seconds."""
+        ts = self.question_timestamps.get(question_index)
+        if ts and ts["asked_at"] and ts["answered_at"]:
+            return round(ts["answered_at"] - ts["asked_at"], 1)
+        return 0.0
+    
+    # --- Feature 2/3: Logical errors ---
+    
+    def record_logical_error(self, question_index: int, issue_type: str, 
+                              feedback: str, severity: str):
+        """Record a logical error detected in an answer."""
+        self.logical_errors.append({
+            "question_index": question_index,
+            "issue_type": issue_type,
+            "feedback": feedback,
+            "severity": severity
+        })
     
     def get_scores_summary(self) -> dict:
         """Get aggregate scores for the report."""

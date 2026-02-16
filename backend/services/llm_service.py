@@ -111,10 +111,10 @@ No explanation, no markdown, just the JSON object."""
         return {"accuracy": 5, "depth": 5, "clarity": 5}
 
 
-async def get_hint(question, resume_text, job_desc, level="medium"):
+async def get_hint(question, resume_text, job_desc, level="medium", topic="General"):
     """
-    Generate contextual hints based on resume and job description.
-    Supports three levels: small, medium, full
+    Generate topic-aware, progressive hints based on resume and job description.
+    Supports three levels: small (direction), medium (approach), full (partial outline)
     """
     
     level_instructions = {
@@ -133,11 +133,12 @@ async def get_hint(question, resume_text, job_desc, level="medium"):
             - Help them structure their thinking
         """,
         "full": """
-            Provide a comprehensive answer guide.
-            - Include key points to mention
-            - Suggest a structure for the answer
-            - Can include specific examples from their resume
-            - Still encourage them to express in their own words
+            Provide a PARTIAL solution outline only.
+            - Show the key steps or structure of the solution
+            - Include 2-3 critical points to mention
+            - Do NOT give the complete answer
+            - Leave gaps for the candidate to fill in themselves
+            - Can reference their resume/projects for context
         """
     }
     
@@ -150,16 +151,21 @@ async def get_hint(question, resume_text, job_desc, level="medium"):
     
     CANDIDATE'S RESUME: {resume_text}
     
+    QUESTION TOPIC: {topic}
     The interviewer just asked: "{question}"
     
     HINT LEVEL: {level.upper()}
     {hint_level}
     
     IMPORTANT GUIDELINES:
+    - Tailor your hint specifically to the {topic} domain
     - Base your hints on the candidate's ACTUAL resume and experience
     - Reference specific projects, skills, or experiences from their resume when relevant
     - Be encouraging and professional
     - Help them connect their experience to the job requirements
+    - For DSA questions: focus on algorithmic thinking and data structure choice
+    - For OS questions: focus on process/memory/scheduling concepts
+    - For DBMS questions: focus on schema design, normalization, query optimization
     """
     
     messages = [{"role": "system", "content": system_prompt}]

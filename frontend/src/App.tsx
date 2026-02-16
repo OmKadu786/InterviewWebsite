@@ -5,9 +5,12 @@ import { VideoAnalysis } from './components/VideoInterview/VideoAnalysis';
 import { ChatBox } from './components/Interview/ChatBox';
 import { FileUpload } from './components/FileUpload';
 import { CandidateReport } from './components/Analytics/CandidateReport';
+import { WeaknessReport } from './components/Analytics/WeaknessReport';
 import { ConsentModal } from './components/ConsentModal';
 import { WelcomeModal } from './components/WelcomeModal';
 import { HintLevelButtons, HintLevel } from './components/HintLevelButtons';
+import { LogicFeedback } from './components/Interview/LogicFeedback';
+import { SpeechFeedback } from './components/Interview/SpeechFeedback';
 import { Sparkles, Loader2, ArrowRight, Lightbulb } from 'lucide-react';
 import { Hero } from './components/Home/Hero';
 import { API_ENDPOINTS } from './config/api';
@@ -35,6 +38,16 @@ function App() {
   const [isUserSpeaking, setIsUserSpeaking] = useState(false);
   const [currentHint, setCurrentHint] = useState<string | null>(null);
   const [hintLoading, setHintLoading] = useState(false);
+  const [hintTopic, setHintTopic] = useState<string | null>(null);
+  const [availableHintLevel, setAvailableHintLevel] = useState<string | null>('small');
+
+  // Feature 2 & 4: Real-time feedback state
+  const [logicFeedback, setLogicFeedback] = useState<{
+    issue_type: string; feedback: string; severity: 'info' | 'warning' | 'error';
+  } | null>(null);
+  const [speechFeedback, setSpeechFeedback] = useState<{
+    wpm: number; pace: string; filler_count: number; confidence_level: string; long_silence: boolean; feedback: string;
+  } | null>(null);
 
   // Callbacks for ChatBox to update speaking states
   const handleAISpeakingChange = useCallback((speaking: boolean) => {
@@ -45,11 +58,11 @@ function App() {
     setIsUserSpeaking(speaking);
   }, []);
 
-  // Handle hint requests - connects to LLM backend
+  // Handle hint requests - connects to LLM backend with progressive hints
   const handleHintRequest = async (level: HintLevel, prompt: string) => {
     setHintLoading(true);
     try {
-      // Call backend for contextual LLM-based hints
+      // Call backend for contextual LLM-based hints (progressive enforcement is server-side)
       const response = await fetch(API_ENDPOINTS.getHint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -59,6 +72,13 @@ function App() {
       if (response.ok) {
         const data = await response.json();
         setCurrentHint(data.hint || 'Focus on your relevant experience.');
+        // Feature 1: Update hint availability and topic from response
+        if (data.available_level !== undefined) {
+          setAvailableHintLevel(data.available_level);
+        }
+        if (data.topic) {
+          setHintTopic(data.topic);
+        }
       } else {
         // Fallback hints if API fails
         const fallbackHints = {
@@ -77,6 +97,20 @@ function App() {
       setHintLoading(false);
     }
   };
+
+  // Feature 2: Logic feedback handler
+  const handleLogicFeedback = useCallback((feedback: { issue_type: string; feedback: string; severity: string }) => {
+    setLogicFeedback(feedback as any);
+    // Auto-dismiss after 15 seconds
+    setTimeout(() => setLogicFeedback(null), 15000);
+  }, []);
+
+  // Feature 4: Speech feedback handler
+  const handleSpeechFeedback = useCallback((feedback: { wpm: number; pace: string; filler_count: number; confidence_level: string; long_silence: boolean; feedback: string }) => {
+    setSpeechFeedback(feedback);
+    // Auto-dismiss after 10 seconds
+    setTimeout(() => setSpeechFeedback(null), 10000);
+  }, []);
 
   // Handle the initial click on "Start Interview" - shows consent if not given
   const handleStartInterviewClick = () => {
@@ -252,6 +286,8 @@ function App() {
                   <HintLevelButtons
                     onRequestHint={handleHintRequest}
                     isLoading={hintLoading}
+                    availableLevel={availableHintLevel}
+                    topic={hintTopic}
                   />
                 </div>
               </div>
@@ -265,12 +301,24 @@ function App() {
                 />
               </div>
 
-              {/* Right Panel: Chat */}
-              <div className="lg:col-span-3 h-full min-h-0 flex flex-col">
+              {/* Right Panel: Chat + Real-time Feedback */}
+              <div className="lg:col-span-3 h-full min-h-0 flex flex-col gap-2">
+                {/* Feature 2: Logic Feedback */}
+                <LogicFeedback
+                  feedback={logicFeedback}
+                  onDismiss={() => setLogicFeedback(null)}
+                />
+                {/* Feature 4: Speech Feedback */}
+                <SpeechFeedback
+                  feedback={speechFeedback}
+                  onDismiss={() => setSpeechFeedback(null)}
+                />
                 <ChatBox
                   onEnd={handleEndInterview}
                   onAISpeakingChange={handleAISpeakingChange}
                   onUserSpeakingChange={handleUserSpeakingChange}
+                  onLogicFeedback={handleLogicFeedback}
+                  onSpeechFeedback={handleSpeechFeedback}
                 />
               </div>
 
@@ -288,6 +336,9 @@ function App() {
                 ← Back to Home
               </button>
               <CandidateReport />
+              <div className="mt-6">
+                <WeaknessReport />
+              </div>
             </div>
           </div>
         )}
