@@ -3,7 +3,8 @@
 
 // Get the current hostname (works for both localhost and network IP)
 // Hardcoded to localhost for debugging
-const API_BASE_URL = 'http://localhost:9000';
+// Use environment variable if available (production), otherwise fallback to localhost
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:9000';
 
 console.log('HireByte API Config (Hardcoded):', {
   apiUrl: API_BASE_URL,
@@ -22,8 +23,8 @@ export const API_ENDPOINTS = {
   health: `${API_BASE_URL}/health`,
 };
 
-// WebSocket endpoints - replace http with ws
-const WS_BASE_URL = API_BASE_URL.replace('http', 'ws');
+// WebSocket endpoints - replace http with ws, https with wss
+const WS_BASE_URL = API_BASE_URL.replace(/^http/, 'ws');
 
 export const WS_ENDPOINTS = {
   interview: `${WS_BASE_URL}/ws/interview`,
