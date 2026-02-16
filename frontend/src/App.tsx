@@ -187,8 +187,8 @@ function App() {
                         key={level}
                         onClick={() => setDifficulty(level)}
                         className={`py-2 px-4 rounded-xl border text-sm font-medium transition-all ${difficulty === level
-                            ? 'bg-hirebyte-mint text-white border-hirebyte-mint'
-                            : 'bg-secondary/30 border-border hover:border-hirebyte-mint/50'
+                          ? 'bg-hirebyte-mint text-white border-hirebyte-mint'
+                          : 'bg-secondary/30 border-border hover:border-hirebyte-mint/50'
                           }`}
                       >
                         {level.charAt(0).toUpperCase() + level.slice(1)}
@@ -216,10 +216,10 @@ function App() {
 
         {view === 'interview' && (
           <div className="h-[calc(100vh-4rem)] p-4 md:p-6 overflow-hidden relative">
-            <div className="max-w-[1920px] mx-auto h-full grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <div className="max-w-[1920px] mx-auto h-full grid grid-cols-1 lg:grid-cols-12 gap-4">
 
               {/* Left Panel: Context & Inputs */}
-              <div className="lg:col-span-3 h-full flex flex-col gap-4 bg-card/30 border border-border/50 rounded-2xl p-4 overflow-y-auto backdrop-blur-sm">
+              <div className="lg:col-span-2 h-full min-h-0 flex flex-col gap-4 bg-card/30 border border-border/50 rounded-2xl p-4 overflow-y-auto backdrop-blur-sm">
                 <div className="mb-4">
                   <h3 className="font-semibold text-lg flex items-center gap-2 mb-1">
                     <Sparkles size={16} className="text-hirebyte-mint" />
@@ -257,7 +257,7 @@ function App() {
               </div>
 
               {/* Center Panel: Video Stream */}
-              <div className="lg:col-span-6 h-full flex flex-col">
+              <div className="lg:col-span-7 h-full min-h-0 flex flex-col">
                 <VideoAnalysis
                   isAISpeaking={isAISpeaking}
                   isUserSpeaking={isUserSpeaking}
@@ -266,7 +266,7 @@ function App() {
               </div>
 
               {/* Right Panel: Chat */}
-              <div className="lg:col-span-3 h-full">
+              <div className="lg:col-span-3 h-full min-h-0 flex flex-col">
                 <ChatBox
                   onEnd={handleEndInterview}
                   onAISpeakingChange={handleAISpeakingChange}
