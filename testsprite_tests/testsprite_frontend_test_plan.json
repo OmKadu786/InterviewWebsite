@@ -1,0 +1,649 @@
+[
+  {
+    "id": "TC001",
+    "title": "Start as Guest and launch interview with Python (Medium)",
+    "description": "Verifies a guest user can configure topic and difficulty and successfully start an interview.",
+    "category": "Onboarding & Setup",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Start as Guest\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/setup\""
+      },
+      {
+        "type": "action",
+        "description": "Select \"Python\" from the Interview Topic dropdown"
+      },
+      {
+        "type": "action",
+        "description": "Select \"Medium\" from the Difficulty dropdown"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Start Interview\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/interview\""
+      }
+    ]
+  },
+  {
+    "id": "TC002",
+    "title": "Setup validation: topic required before starting interview",
+    "description": "Verifies the Setup page blocks interview start when no topic is selected and shows the correct validation message.",
+    "category": "Onboarding & Setup",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Start as Guest\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/setup\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Start Interview\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Please select a topic\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Select \"Python\" from the Interview Topic dropdown"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Start Interview\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/interview\""
+      }
+    ]
+  },
+  {
+    "id": "TC003",
+    "title": "Setup validation clears after selecting a topic",
+    "description": "Verifies the topic-required validation message is no longer shown after a topic is selected.",
+    "category": "Onboarding & Setup",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Start as Guest\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/setup\""
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Start Interview\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Please select a topic\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Select \"Python\" from the Interview Topic dropdown"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Start Interview\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Please select a topic\" is not visible"
+      }
+    ]
+  },
+  {
+    "id": "TC004",
+    "title": "Difficulty selection persists on Setup prior to starting interview",
+    "description": "Verifies that selecting a difficulty is reflected on screen before starting the interview.",
+    "category": "Onboarding & Setup",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Start as Guest\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/setup\""
+      },
+      {
+        "type": "action",
+        "description": "Select \"Python\" from the Interview Topic dropdown"
+      },
+      {
+        "type": "action",
+        "description": "Select \"Medium\" from the Difficulty dropdown"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Medium\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Start Interview\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/interview\""
+      }
+    ]
+  },
+  {
+    "id": "TC005",
+    "title": "Guest onboarding: Landing to Setup transition shows Setup UI",
+    "description": "Verifies that the guest start action reliably routes to Setup and displays expected setup content.",
+    "category": "Onboarding & Setup",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Start as Guest\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/setup\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Interview Topic\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Difficulty\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Start Interview\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC006",
+    "title": "Setup to Interview transition shows Interview UI shell",
+    "description": "Verifies that starting an interview from Setup lands on the Interview page and shows core interview UI elements.",
+    "category": "Onboarding & Setup",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Start as Guest\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/setup\""
+      },
+      {
+        "type": "action",
+        "description": "Select \"Python\" from the Interview Topic dropdown"
+      },
+      {
+        "type": "action",
+        "description": "Select \"Medium\" from the Difficulty dropdown"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Start Interview\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Interview\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC007",
+    "title": "Request Small hint from the interview page and see contextual hint content",
+    "description": "Verifies a user can request a Small hint and the UI displays a hint response panel/message.",
+    "category": "Real-time Analysis & Hints",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /interview"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Hint (Small)\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Hint (Small)\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Hint\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"hint panel\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC008",
+    "title": "Request Full hint and see the full contextual hint panel",
+    "description": "Verifies a user can request a Full hint and the UI shows a full hint panel after the request completes.",
+    "category": "Real-time Analysis & Hints",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /interview"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Hint (Full)\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Hint (Full)\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"full hint panel\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Hint\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC009",
+    "title": "Hint buttons are visible alongside live analysis overlay during the interview",
+    "description": "Verifies the hint controls are present while live analysis overlay labels are visible on the interview page.",
+    "category": "Real-time Analysis & Hints",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /interview"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Confidence\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Focus\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Emotion\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Hint (Small)\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Hint (Full)\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC010",
+    "title": "Repeated Small hint requests remain functional and show hint content each time",
+    "description": "Verifies the user can request a Small hint more than once without the UI breaking, and hint content appears after each request.",
+    "category": "Real-time Analysis & Hints",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /interview"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Hint (Small)\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"hint panel\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Hint (Small)\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"hint panel\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC011",
+    "title": "Full hint request displays content without obscuring the presence of live metric labels",
+    "description": "Verifies that after displaying the Full hint, the live analysis metric labels remain visible on the page.",
+    "category": "Real-time Analysis & Hints",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /interview"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Hint (Full)\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"full hint panel\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Confidence\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Focus\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Emotion\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC012",
+    "title": "View analytics dashboard with readiness ring, topic mastery, and reasoning metrics",
+    "description": "Verifies the analytics page loads successfully and key score visuals are visible.",
+    "category": "Analytics Dashboard & Feedback Report",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /analytics"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Analytics\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Readiness\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Topic Mastery\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Reasoning\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Readiness Ring\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Topic Mastery Radar\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Reasoning Density\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC013",
+    "title": "Open and read AI feedback details from analytics dashboard",
+    "description": "Verifies that the AI feedback panel/modal opens and shows strengths and improvement areas.",
+    "category": "Analytics Dashboard & Feedback Report",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /analytics"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"View AI Feedback\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"View AI Feedback\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Strengths\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Improvements\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"AI Feedback\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC014",
+    "title": "Close AI feedback and return to analytics dashboard view",
+    "description": "Verifies the AI feedback view can be dismissed and the dashboard remains accessible.",
+    "category": "Analytics Dashboard & Feedback Report",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /analytics"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"View AI Feedback\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"AI Feedback\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Close\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"AI Feedback\" is not visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Readiness\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC015",
+    "title": "Retry loading analytics after server error message",
+    "description": "Verifies the page shows an error state and can recover using Retry to display analytics.",
+    "category": "Analytics Dashboard & Feedback Report",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /analytics"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Unable to load analytics\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Retry\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Retry\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Unable to load analytics\" is not visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Readiness\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC016",
+    "title": "Export PDF report from analytics dashboard (happy path UI)",
+    "description": "Verifies the Export PDF action is available and initiates an export flow from the UI.",
+    "category": "Analytics Dashboard & Feedback Report",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /analytics"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Export PDF\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Export PDF\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Exporting\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Exporting\" is not visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Export PDF\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC017",
+    "title": "Export PDF failure shows error message and Email report fallback option",
+    "description": "Verifies a failed export shows the correct error state and provides a visible fallback option.",
+    "category": "Analytics Dashboard & Feedback Report",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /analytics"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Export PDF\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Export failed, try again later\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Email report\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Export PDF\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC018",
+    "title": "Email report fallback opens a UI flow after export failure",
+    "description": "Verifies the Email report fallback is actionable and opens an email/report-sending UI surface.",
+    "category": "Analytics Dashboard & Feedback Report",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /analytics"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Export PDF\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Email report\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Email report\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Email\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Send\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC019",
+    "title": "Analytics page shows stable UI when refreshed during view",
+    "description": "Verifies reloading the analytics route keeps the page functional and key sections visible.",
+    "category": "Analytics Dashboard & Feedback Report",
+    "priority": "Low",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /analytics"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Readiness\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /analytics"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Topic Mastery\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Reasoning\" is visible"
+      }
+    ]
+  }
+]

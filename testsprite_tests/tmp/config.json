@@ -1,0 +1,20 @@
+{
+  "status": "commited",
+  "type": "frontend",
+  "scope": "codebase",
+  "localEndpoint": "http://localhost:5173",
+  "executionArgs": {
+    "projectName": "InterviewWebsite-main",
+    "projectPath": "d:/fin_on_day/InterviewWebsite-main",
+    "testIds": [
+      "TC001",
+      "TC006",
+      "TC012"
+    ],
+    "additionalInstruction": "Ensure to mock camera/microphone permissions for the interview page tests to avoid browser prompts blocking execution. Use localhost:5173 as the base URL.",
+    "envs": {
+      "API_KEY": "sk-user-0LHpU4yuEZwbrHQZ3MvA0mVXgUBd0-R59xjT8qjqWSLALG3sVX3R5f5iG_QSjllfnIFVcPFfdqPunBVDueC3kXgE0rA8GHx9HGxUbN2Xk9t9uyDIgdqdo26q7Q1Mtgc7b4g"
+    }
+  },
+  "serverPort": 60516
+}

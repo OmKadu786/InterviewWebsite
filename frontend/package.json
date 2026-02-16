@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite --host",
     "build": "vite build",
+    "test:sprite": "npx @testsprite/testsprite-mcp@latest generateCodeAndExecute",
     "lint": "eslint .",
     "preview": "vite preview --host",
     "typecheck": "tsc --noEmit -p tsconfig.app.json"

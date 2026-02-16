@@ -1,0 +1,55 @@
+version: "2"
+type: frontend
+tech_stack:
+  - React
+  - TypeScript
+  - Vite
+  - TailwindCSS
+routes:
+  - path: /
+    file: src/pages/LandingPage.tsx
+    auth_required: false
+    description: Landing page with login and start options
+  - path: /setup
+    file: src/pages/SetupPage.tsx
+    auth_required: false
+    description: Interview setup (topic/difficulty selection)
+  - path: /interview
+    file: src/pages/InterviewPage.tsx
+    auth_required: false
+    description: Main interview interface with webcam and chat
+  - path: /analytics
+    file: src/pages/AnalyticsPage.tsx
+    auth_required: false
+    description: Post-interview analytics report
+features:
+  - name: Interview Session
+    description: Conduct a technical interview with AI
+    files:
+      - src/pages/InterviewPage.tsx
+      - src/components/VideoInterview/VideoAnalysis.tsx
+    entry_route: /interview
+    user_interactions:
+      - Grant camera/mic permissions
+      - Speak answers
+      - View real-time hints
+      - Click Done to finish
+    api_calls:
+      - method: POST
+        endpoint: /api/interview/start
+    auth_required: false
+  - name: Analytics Dashboard
+    description: View interview performance metrics
+    files:
+      - src/pages/AnalyticsPage.tsx
+      - src/components/Analytics/CandidateReport.tsx
+    entry_route: /analytics
+    user_interactions:
+      - View scores and charts
+      - Export PDF report
+      - View AI feedback
+    api_calls:
+      - method: GET
+        endpoint: /api/analytics
+    auth_required: false
+known_limitations: []
