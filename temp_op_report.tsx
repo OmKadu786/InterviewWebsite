@@ -2,7 +2,7 @@
  * CandidateReport - Main Analytics Dashboard for HireByte
  * Displays comprehensive interview performance analytics with charts and AI feedback.
  */
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { API_ENDPOINTS } from '../../config/api';
 import {
   RadarChart,
@@ -22,20 +22,16 @@ import {
   ResponsiveContainer,
   Cell
 } from 'recharts';
-import {
-  Download,
-  TrendingUp,
-  Eye,
-  MessageCircle,
+import { 
+  Download, 
+  TrendingUp, 
+  Eye, 
+  MessageCircle, 
   Brain,
   Sparkles,
   CheckCircle,
-  AlertCircle,
-  Award
+  AlertCircle
 } from 'lucide-react';
-import { Badge } from '../Badge';
-import { BADGES, BADGE_CATEGORY_LABELS, BadgeCategory } from '../../data/badges';
-import { evaluateEarnedBadges, WeaknessInput } from '../../data/badgeEvaluator';
 
 interface AnalyticsData {
   radar_chart_data: {
@@ -75,13 +71,11 @@ interface FeedbackData {
 export function CandidateReport() {
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [feedback, setFeedback] = useState<FeedbackData | null>(null);
-  const [weakness, setWeakness] = useState<WeaknessInput | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingFeedback, setLoadingFeedback] = useState(false);
 
   useEffect(() => {
     fetchAnalytics();
-    fetchWeakness();
   }, []);
 
   const fetchAnalytics = async () => {
@@ -95,33 +89,6 @@ export function CandidateReport() {
       setLoading(false);
     }
   };
-
-  const fetchWeakness = async () => {
-    try {
-      const res = await fetch(`${API_ENDPOINTS.uploadResume.replace('/upload-resume', '')}/api/session/weakness-analysis`);
-      if (res.ok) setWeakness(await res.json());
-    } catch (e) {
-      console.error('Weakness fetch skipped:', e);
-    }
-  };
-
-  // Evaluate earned badges whenever analytics or weakness data changes
-  const earnedBadges = useMemo(
-    () => evaluateEarnedBadges(analytics as any, weakness),
-    [analytics, weakness]
-  );
-
-  // Group earned badges by category for display
-  const badgesByCategory = useMemo(() => {
-    const groups: Partial<Record<BadgeCategory, string[]>> = {};
-    for (const id of earnedBadges) {
-      const badge = BADGES[id];
-      if (!badge) continue;
-      if (!groups[badge.category]) groups[badge.category] = [];
-      groups[badge.category]!.push(id);
-    }
-    return groups;
-  }, [earnedBadges]);
 
   const fetchFeedback = async () => {
     setLoadingFeedback(true);
@@ -210,7 +177,7 @@ export function CandidateReport() {
     focus: 0.15,
     emotional_intelligence: 0.15
   };
-
+  
   const overallScore = Math.round(
     analytics.radar_chart_data.communication * weights.communication +
     analytics.radar_chart_data.confidence * weights.confidence +
@@ -218,17 +185,17 @@ export function CandidateReport() {
     analytics.radar_chart_data.focus * weights.focus +
     analytics.radar_chart_data.emotional_intelligence * weights.emotional_intelligence
   );
-
+  
   // Apply sample size penalty for short interviews (less reliable scores)
   const sampleCount = analytics.vision_analytics.per_question_metrics?.length || 0;
-  const adjustedScore = sampleCount < 3
+  const adjustedScore = sampleCount < 3 
     ? Math.round(overallScore * 0.9) // 10% penalty for very short interviews
     : overallScore;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
       <div id="report-content" className="max-w-6xl mx-auto space-y-6">
-
+        
         {/* Header */}
         <div className="flex justify-between items-center">
           <div>
@@ -264,7 +231,7 @@ export function CandidateReport() {
 
         {/* Charts Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
+          
           {/* Radar Chart */}
           <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
@@ -325,9 +292,9 @@ export function CandidateReport() {
                 />
                 <Bar dataKey="sentiment" radius={[4, 4, 0, 0]}>
                   {sentimentData.map((entry, index) => (
-                    <Cell
-                      key={`cell-${index}`}
-                      fill={entry.sentiment > 60 ? '#2ECC71' : entry.sentiment > 40 ? '#F59E0B' : '#EF4444'}
+                    <Cell 
+                      key={`cell-${index}`} 
+                      fill={entry.sentiment > 60 ? '#2ECC71' : entry.sentiment > 40 ? '#F59E0B' : '#EF4444'} 
                     />
                   ))}
                 </Bar>
@@ -389,7 +356,7 @@ export function CandidateReport() {
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Eye Contact</p>
             </div>
           </div>
-
+          
           {/* Common Fillers */}
           {analytics.nlp_report.most_common_fillers?.length > 0 && (
             <div className="mt-4">
@@ -408,28 +375,6 @@ export function CandidateReport() {
           )}
         </div>
 
-        {/* Achievements / Badges */}
-        {earnedBadges.length > 0 && (
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-              <Award size={20} className="text-hirebyte-mint" />
-              Achievements
-            </h2>
-            <div className="space-y-4">
-              {(Object.entries(badgesByCategory) as [BadgeCategory, string[]][]).map(([cat, ids]) => (
-                <div key={cat}>
-                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
-                    {BADGE_CATEGORY_LABELS[cat]}
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {ids.map(id => <Badge key={id} id={id} />)}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
         {/* AI Feedback */}
         <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
           <div className="flex justify-between items-center mb-4">
@@ -447,7 +392,7 @@ export function CandidateReport() {
               </button>
             )}
           </div>
-
+          
           {feedback ? (
             <div className="grid md:grid-cols-2 gap-6">
               {/* Strengths */}
@@ -465,7 +410,7 @@ export function CandidateReport() {
                   ))}
                 </ul>
               </div>
-
+              
               {/* Improvements */}
               <div>
                 <h3 className="font-medium text-amber-600 dark:text-amber-400 mb-3 flex items-center gap-2">
