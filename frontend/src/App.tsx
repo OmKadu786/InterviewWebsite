@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { ThemeProvider } from './context/ThemeContext';
 import { Layout } from './components/Layout/Layout';
+import { InterviewLayout } from './components/Layout/InterviewLayout';
 import { VideoAnalysis } from './components/VideoInterview/VideoAnalysis';
 import { ChatBox } from './components/Interview/ChatBox';
 import { FileUpload } from './components/FileUpload';
@@ -215,11 +216,9 @@ function App() {
         )}
 
         {view === 'interview' && (
-          <div className="h-[calc(100vh-4rem)] p-4 md:p-6 overflow-hidden relative">
-            <div className="max-w-[1920px] mx-auto h-full grid grid-cols-1 lg:grid-cols-12 gap-4">
-
-              {/* Left Panel: Context & Inputs */}
-              <div className="lg:col-span-2 h-full min-h-0 flex flex-col gap-4 bg-card/30 border border-border/50 rounded-2xl p-4 overflow-y-auto backdrop-blur-sm">
+          <InterviewLayout
+            leftPanel={
+              <div className="h-full flex flex-col gap-4 bg-card/30 border border-border/50 rounded-2xl p-4 overflow-y-auto backdrop-blur-sm">
                 <div className="mb-4">
                   <h3 className="font-semibold text-lg flex items-center gap-2 mb-1">
                     <Sparkles size={16} className="text-hirebyte-mint" />
@@ -255,27 +254,22 @@ function App() {
                   />
                 </div>
               </div>
-
-              {/* Center Panel: Video Stream */}
-              <div className="lg:col-span-7 h-full min-h-0 flex flex-col">
-                <VideoAnalysis
-                  isAISpeaking={isAISpeaking}
-                  isUserSpeaking={isUserSpeaking}
-                  currentHint={currentHint}
-                />
-              </div>
-
-              {/* Right Panel: Chat */}
-              <div className="lg:col-span-3 h-full min-h-0 flex flex-col">
-                <ChatBox
-                  onEnd={handleEndInterview}
-                  onAISpeakingChange={handleAISpeakingChange}
-                  onUserSpeakingChange={handleUserSpeakingChange}
-                />
-              </div>
-
-            </div>
-          </div>
+            }
+            centerPanel={
+              <VideoAnalysis
+                isAISpeaking={isAISpeaking}
+                isUserSpeaking={isUserSpeaking}
+                currentHint={currentHint}
+              />
+            }
+            rightPanel={
+              <ChatBox
+                onEnd={handleEndInterview}
+                onAISpeakingChange={handleAISpeakingChange}
+                onUserSpeakingChange={handleUserSpeakingChange}
+              />
+            }
+          />
         )}
 
         {view === 'analytics' && (
