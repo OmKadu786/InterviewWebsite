@@ -2,7 +2,8 @@ from fastapi import FastAPI, HTTPException, UploadFile, File, Form, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from pydantic import BaseModel
-from config.database import init_db, close_db
+from config.database import init_db, close_db, interviews_collection
+from datetime import datetime
 from services.interview_services import InterviewService
 from models.interview_schema import InterviewReport
 from services.pdf_service import extract_text_from_pdf
@@ -12,10 +13,6 @@ from services.video_service import process_video_frame, Stabilizer
 from services.resume_analyzer import analyze_resume, build_compact_summary
 from services.interview_planner import generate_interview_plan
 from services.interview_state import InterviewState
-from services.logic_validator import validate_logic
-from services.speech_analyzer import analyze_speech_confidence
-from services.weakness_engine import calculate_weakness_scores, detect_repeated_patterns, classify_topics
-import asyncio
 import threading
 import json
 import base64
@@ -32,11 +29,11 @@ client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 async def lifespan(app: FastAPI):
     # Startup: Initialize database
     try:
-        print("[...] Initializing database...")
+        print("🔄 Initializing database...")
         await init_db()
-        print("[OK] Database initialized successfully")
+        print("✅ Database initialized successfully")
     except Exception as e:
-        print(f"[ERROR] Database initialization failed: {e}")
+        print(f"❌ Database initialization failed: {e}")
         print(f"Error details: {type(e).__name__}")
         import traceback
         traceback.print_exc()
@@ -45,11 +42,11 @@ async def lifespan(app: FastAPI):
     
     # Shutdown: Close database connections
     try:
-        print("[...] Closing database connections...")
+        print("🔄 Closing database connections...")
         await close_db()
-        print("[OK] Database connections closed")
+        print("✅ Database connections closed")
     except Exception as e:
-        print(f"[WARN] Error closing database: {e}")
+        print(f"⚠️ Error closing database: {e}")
 
 # Initialize FastAPI with lifespan
 app = FastAPI(
@@ -107,50 +104,8 @@ async def get_interview_hint(request: HintRequest):
     if not session_data["resume_text"]:
         return {"hint": "Please upload a resume first."}
     
-    state = session_data.get("interview_state")
-    q_index = state.total_questions_asked if state else 0
-    
-    # Feature 1: Progressive hint enforcement
-    if state:
-        available_level = state.get_available_hint_level(q_index)
-        if available_level is None:
-            return {
-                "hint": "You've used all hint levels for this question. Try your best!",
-                "level_used": "exhausted",
-                "available_level": None,
-                "topic": state.question_topics.get(q_index, "GENERAL")
-            }
-        # Use the progressive level instead of requested level
-        level = available_level
-    else:
-        level = request.level
-    
-    # Feature 1: Detect question topic
-    # Use the topic from the interview state (which comes from the plan)
-    if state and q_index in state.question_topics:
-        topic = state.question_topics[q_index]
-    else:
-        topic = "General"
-    
-    if state:
-        state.question_topics[q_index] = topic
-    
-    hint = await get_hint(request.question, session_data["resume_text"], 
-                          session_data["job_description"], level, topic)
-    
-    # Record hint usage
-    if state:
-        state.record_hint_used(q_index, level)
-    
-    # Calculate next available level
-    next_level = state.get_available_hint_level(q_index) if state else None
-    
-    return {
-        "hint": hint, 
-        "level_used": level,
-        "available_level": next_level,
-        "topic": topic
-    }
+    hint = await get_hint(request.question, session_data["resume_text"], session_data["job_description"], request.level)
+    return {"hint": hint}
 
 @app.post("/upload-resume")
 async def upload_resume(file: UploadFile = File(...), job_description: str = Form(...)):
@@ -187,7 +142,7 @@ async def upload_resume(file: UploadFile = File(...), job_description: str = For
 
 @app.post("/transcribe")
 async def transcribe_audio(file: UploadFile = File(...)):
-    temp_path = "temp_voice.wav"
+    temp_path = "temp_voice.webm"
     with open(temp_path, "wb") as buffer:
         buffer.write(await file.read())
     
@@ -236,12 +191,6 @@ async def interview_websocket(websocket: WebSocket):
         # Track the question for evaluation later
         if state:
             state.current_question_text = response_text
-            # Feature 3: Mark question timing
-            state.mark_question_asked(state.total_questions_asked)
-            # Feature 1: Use topic from the plan
-            step = state.get_current_step()
-            topic = step["topic"] if step else "General"
-            state.question_topics[state.total_questions_asked] = topic
         
         chat_history.append({"role": "assistant", "content": response_text})
         session_data["transcript"].append({"role": "ai", "content": response_text})
@@ -263,46 +212,21 @@ async def interview_websocket(websocket: WebSocket):
             
             if msg["type"] == "user_turn":
                 user_text = msg["text"]
-                
-                # Feature 4: Extract speech timing from client
-                speech_duration = msg.get("duration", 0)  # seconds of speaking
-                silence_duration = msg.get("silence_duration", 0)  # pause before speaking
-                
                 chat_history.append({"role": "user", "content": user_text})
                 session_data["transcript"].append({"role": "user", "content": user_text})
                 
-                # Feature 3: Mark answer time
-                if state:
-                    state.mark_question_answered(state.total_questions_asked)
-                
-                # Run evaluation, logic validation, and speech analysis IN PARALLEL
-                eval_task = None
-                logic_task = None
-                current_topic = "GENERAL"
-                
+                # Evaluate the answer against the current question
                 if state and state.current_question_text and not state.is_complete:
                     step = state.get_current_step()
-                    current_topic = state.question_topics.get(state.total_questions_asked, "GENERAL")
-                    
                     if step:
-                        # Feature 2: Logic validation (in parallel with evaluation)
-                        eval_task = asyncio.create_task(evaluate_answer(
+                        scores = await evaluate_answer(
                             question=state.current_question_text,
                             answer=user_text,
                             category=step["category_name"],
                             topic=step["topic"],
                             candidate_summary=session_data["candidate_summary"],
                             job_desc=session_data["job_description"]
-                        ))
-                        logic_task = asyncio.create_task(validate_logic(
-                            question=state.current_question_text,
-                            answer=user_text,
-                            topic=current_topic,
-                            chat_history=chat_history
-                        ))
-                        
-                        # Await both
-                        scores, logic_result = await asyncio.gather(eval_task, logic_task)
+                        )
                         
                         # Record the score
                         state.record_score(
@@ -322,43 +246,8 @@ async def interview_websocket(websocket: WebSocket):
                         
                         print(f"[Evaluation] Q{state.total_questions_asked}: accuracy={scores['accuracy']}, depth={scores['depth']}, clarity={scores['clarity']}")
                         
-                        # Feature 2: Send logic feedback if issue found
-                        if logic_result and logic_result.get("has_issue"):
-                            state.record_logical_error(
-                                question_index=state.total_questions_asked,
-                                issue_type=logic_result["issue_type"],
-                                feedback=logic_result["feedback"],
-                                severity=logic_result["severity"]
-                            )
-                            await websocket.send_json({
-                                "type": "logic_feedback",
-                                "issue_type": logic_result["issue_type"],
-                                "feedback": logic_result["feedback"],
-                                "severity": logic_result["severity"]
-                            })
-                            print(f"[Logic Validator] {logic_result['severity'].upper()}: {logic_result['feedback']}")
-                        
                         # Advance the plan
                         state.advance()
-                
-                # Feature 4: Speech confidence analysis
-                speech_analysis = analyze_speech_confidence(
-                    text=user_text,
-                    duration_seconds=speech_duration,
-                    silence_duration=silence_duration
-                )
-                
-                if speech_analysis["confidence_level"] != "high" or speech_analysis["long_silence"]:
-                    await websocket.send_json({
-                        "type": "speech_feedback",
-                        "wpm": speech_analysis["wpm"],
-                        "pace": speech_analysis["pace"],
-                        "filler_count": speech_analysis["filler_count"],
-                        "confidence_level": speech_analysis["confidence_level"],
-                        "long_silence": speech_analysis["long_silence"],
-                        "feedback": speech_analysis["feedback"]
-                    })
-                    print(f"[Speech Analyzer] {speech_analysis['confidence_level']}: {speech_analysis['feedback']}")
                 
                 # Generate next question using plan context
                 interview_context = state.to_context_string() if state else ""
@@ -373,12 +262,6 @@ async def interview_websocket(websocket: WebSocket):
                 # Track this question for next evaluation
                 if state:
                     state.current_question_text = ai_reply
-                    # Feature 3: Mark when next question was asked
-                    state.mark_question_asked(state.total_questions_asked)
-                    # Feature 1: Get topic for next question from plan
-                    next_step = state.get_current_step()
-                    next_topic = next_step["topic"] if next_step else "General"
-                    state.question_topics[state.total_questions_asked] = next_topic
                 
                 chat_history.append({"role": "assistant", "content": ai_reply})
                 session_data["transcript"].append({"role": "ai", "content": ai_reply})
@@ -555,7 +438,7 @@ async def get_analytics():
         technical_accuracy = min(100, avg_confidence + 15)
         communication_score = min(100, avg_emotion + 20)
     
-    return {
+    analytics_result = {
         "radar_chart_data": {
             "technical_accuracy": technical_accuracy,
             "communication": communication_score,
@@ -581,6 +464,109 @@ async def get_analytics():
         },
         "answer_evaluation": scores_summary
     }
+    
+    # Auto-save to MongoDB
+    try:
+        save_doc = {
+            "saved_at": datetime.utcnow(),
+            "job_description": session_data.get("job_description", ""),
+            "candidate_profile": session_data.get("candidate_profile"),
+            "candidate_summary": session_data.get("candidate_summary", ""),
+            # "transcript": session_data.get("transcript", []), # Transcript excluded per user request
+            "answer_scores": session_data.get("answer_scores", []),
+            "video_metrics_summary": {
+                "avg_focus": avg_focus,
+                "avg_emotion": avg_emotion,
+                "avg_confidence": avg_confidence,
+                "avg_stress": avg_stress,
+                "total_frames": len(metrics)
+            },
+            "analytics": analytics_result,
+            "interview_plan": session_data.get("interview_plan"),
+            "scores_summary": scores_summary
+        }
+        result = await interviews_collection.insert_one(save_doc)
+        # Store the ID so we can update this record with feedback later
+        session_data["current_interview_id"] = str(result.inserted_id)
+        print(f"✅ Interview report saved to MongoDB with ID: {result.inserted_id}")
+    except Exception as e:
+        print(f"⚠️ Failed to save interview report: {e}")
+    
+    return analytics_result
+
+
+@app.post("/api/analytics/feedback")
+async def generate_interview_feedback():
+    """
+    Generate strengths and improvements based on the current session.
+    Updates the saved interview record with this feedback.
+    """
+    from services.llm_service import generate_feedback
+    from bson import ObjectId
+    
+    # 1. Generate Feedback
+    try:
+        feedback = await generate_feedback(
+            session_data.get("candidate_summary", ""), 
+            session_data.get("job_description", ""), 
+            session_data.get("transcript", [])
+        )
+        
+        # 2. Update the saved interview record if it exists
+        interview_id = session_data.get("current_interview_id")
+        if interview_id:
+            try:
+                await interviews_collection.update_one(
+                    {"_id": ObjectId(interview_id)},
+                    {"$set": {"feedback": feedback}}
+                )
+                print(f"✅ Feedback saved to interview {interview_id}")
+            except Exception as db_e:
+                print(f"⚠️ Failed to save feedback to DB: {db_e}")
+        
+        return feedback
+        
+    except Exception as e:
+        print(f"Error generating feedback: {e}")
+        raise HTTPException(status_code=500, detail="Failed to generate feedback")
+
+
+# --- Past Interviews Endpoints ---
+
+@app.get("/api/interviews")
+async def list_saved_interviews():
+    """List all saved interview reports from MongoDB"""
+    try:
+        cursor = interviews_collection.find().sort("saved_at", -1)
+        interviews = await cursor.to_list(length=50)
+        
+        results = []
+        for doc in interviews:
+            doc["_id"] = str(doc["_id"])
+            # Convert datetime for JSON serialization
+            if "saved_at" in doc and hasattr(doc["saved_at"], "isoformat"):
+                doc["saved_at"] = doc["saved_at"].isoformat()
+            results.append(doc)
+        
+        return {"interviews": results, "count": len(results)}
+    except Exception as e:
+        print(f"Error listing interviews: {e}")
+        return {"interviews": [], "count": 0, "error": str(e)}
+
+@app.get("/api/interviews/{interview_id}")
+async def get_saved_interview(interview_id: str):
+    """Get a specific saved interview by ID"""
+    from bson import ObjectId
+    try:
+        doc = await interviews_collection.find_one({"_id": ObjectId(interview_id)})
+        if not doc:
+            raise HTTPException(status_code=404, detail="Interview not found")
+        doc["_id"] = str(doc["_id"])
+        if "saved_at" in doc and hasattr(doc["saved_at"], "isoformat"):
+            doc["saved_at"] = doc["saved_at"].isoformat()
+        return doc
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/user/{user_id}/analytics")
 async def get_user_analytics(user_id: str):
@@ -598,48 +584,11 @@ async def get_comparison(user_id: str, job_role: str):
         raise HTTPException(status_code=404, detail="No data available")
     return comparison
 
-@app.get("/api/session/weakness-analysis")
-async def get_session_weakness():
-    """Get weakness analysis for the current session"""
-    state = session_data.get("interview_state")
-    if not state:
-        return {"topic_scores": {}, "classification": {"strong": [], "weak": [], "risk": []}, "patterns": []}
-    
-    scores = calculate_weakness_scores(session_data)
-    classification = classify_topics(scores.get("topic_scores", {}))
-    
-    return {
-        "topic_scores": scores["topic_scores"],
-        "classification": classification,
-        "hint_usage": state.hint_usage,
-        "logical_errors": state.logical_errors,
-        "question_topics": state.question_topics
-    }
-
-@app.get("/api/session/hint-status")
-async def get_hint_status():
-    """Get current hint availability for progressive hint UI"""
-    state = session_data.get("interview_state")
-    if not state:
-        return {"available_level": "small", "used_levels": [], "question_index": 0}
-    
-    q_index = state.total_questions_asked
-    available = state.get_available_hint_level(q_index)
-    used = state.hint_usage.get(q_index, [])
-    topic = state.question_topics.get(q_index, "GENERAL")
-    
-    return {
-        "available_level": available,
-        "used_levels": used,
-        "question_index": q_index,
-        "topic": topic
-    }
-
 if __name__ == "__main__":
     import uvicorn
-    print("Starting HireByte Backend Server...")
-    print("Server: http://localhost:8000")
-    print("API Docs: http://localhost:8000/docs")
+    print("🚀 Starting HireByte Backend Server...")
+    print("📡 Server: http://localhost:8000")
+    print("📚 API Docs: http://localhost:8000/docs")
     print("Press CTRL+C to stop\n")
     
     # FIXED: Changed "main:app" to app

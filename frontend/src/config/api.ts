@@ -19,6 +19,7 @@ export const API_ENDPOINTS = {
   analytics: `${API_BASE_URL}/api/analytics`,
   analyticsTimeline: `${API_BASE_URL}/api/analytics/timeline`,
   analyticsFeedback: `${API_BASE_URL}/api/analytics/feedback`,
+  interviews: `${API_BASE_URL}/api/interviews`,
   health: `${API_BASE_URL}/health`,
 };
 

@@ -22,16 +22,18 @@ import {
   ResponsiveContainer,
   Cell
 } from 'recharts';
-import { 
-  Download, 
-  TrendingUp, 
-  Eye, 
-  MessageCircle, 
+import {
+  Download,
+  TrendingUp,
+  Eye,
+  MessageCircle,
   Brain,
   Sparkles,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  Award
 } from 'lucide-react';
+import { Badge } from '../Badge';
 
 interface AnalyticsData {
   radar_chart_data: {
@@ -83,6 +85,13 @@ export function CandidateReport() {
       const response = await fetch(API_ENDPOINTS.analytics);
       const data = await response.json();
       setAnalytics(data);
+      // If feedback was already generated and saved (e.g. loading a past interview), display it
+      if (data.feedback) {
+        setFeedback(data.feedback);
+      } else if (data.answer_evaluation && data.answer_evaluation.feedback) {
+        // Handle case where feedback might be nested
+        setFeedback(data.answer_evaluation.feedback);
+      }
     } catch (error) {
       console.error('Error fetching analytics:', error);
     } finally {
@@ -177,7 +186,7 @@ export function CandidateReport() {
     focus: 0.15,
     emotional_intelligence: 0.15
   };
-  
+
   const overallScore = Math.round(
     analytics.radar_chart_data.communication * weights.communication +
     analytics.radar_chart_data.confidence * weights.confidence +
@@ -185,17 +194,46 @@ export function CandidateReport() {
     analytics.radar_chart_data.focus * weights.focus +
     analytics.radar_chart_data.emotional_intelligence * weights.emotional_intelligence
   );
-  
+
   // Apply sample size penalty for short interviews (less reliable scores)
   const sampleCount = analytics.vision_analytics.per_question_metrics?.length || 0;
-  const adjustedScore = sampleCount < 3 
+  const adjustedScore = sampleCount < 3
     ? Math.round(overallScore * 0.9) // 10% penalty for very short interviews
     : overallScore;
+
+  // Determine earned badges based on analytics
+  const getBadges = () => {
+    const earnedBadges: string[] = [];
+    const { radar_chart_data, nlp_report, vision_analytics } = analytics;
+
+    // Communication
+    if (nlp_report.filler_rate < 3.0) earnedBadges.push('clear_communicator');
+    if (nlp_report.total_filler_count < 5) earnedBadges.push('filler_free');
+    if (nlp_report.talk_to_listen_ratio >= 0.8 && nlp_report.talk_to_listen_ratio <= 1.5) earnedBadges.push('concise_answerer');
+
+    // Body Language
+    if (vision_analytics.overall_eye_contact_percentage > 75) earnedBadges.push('eye_contact_pro');
+    if (radar_chart_data.confidence > 80) earnedBadges.push('confident_posture');
+    if (radar_chart_data.emotional_intelligence > 80) earnedBadges.push('calm_under_pressure');
+
+    // Answer Quality
+    if (radar_chart_data.technical_accuracy > 85) earnedBadges.push('star_method_master');
+    if (radar_chart_data.focus > 85) earnedBadges.push('role_relevant_thinker');
+
+    // Achievement
+    if (overallScore >= 80) earnedBadges.push('interview_ready');
+    if (overallScore >= 90) earnedBadges.push('top_10_percent');
+    if (radar_chart_data.technical_accuracy >= 90 && radar_chart_data.communication >= 90) earnedBadges.push('mock_interview_ace');
+
+    return earnedBadges;
+  };
+
+  const earnedBadges = getBadges();
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
       <div id="report-content" className="max-w-6xl mx-auto space-y-6">
-        
+
         {/* Header */}
         <div className="flex justify-between items-center">
           <div>
@@ -229,9 +267,24 @@ export function CandidateReport() {
           </div>
         </div>
 
+        {/* Badges Section */}
+        {earnedBadges.length > 0 && (
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+              <Award size={20} className="text-hirebyte-mint" />
+              Achievements Unlocked
+            </h2>
+            <div className="flex flex-wrap gap-3">
+              {earnedBadges.map(badgeId => (
+                <Badge key={badgeId} id={badgeId} />
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Charts Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          
+
           {/* Radar Chart */}
           <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
@@ -292,9 +345,9 @@ export function CandidateReport() {
                 />
                 <Bar dataKey="sentiment" radius={[4, 4, 0, 0]}>
                   {sentimentData.map((entry, index) => (
-                    <Cell 
-                      key={`cell-${index}`} 
-                      fill={entry.sentiment > 60 ? '#2ECC71' : entry.sentiment > 40 ? '#F59E0B' : '#EF4444'} 
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={entry.sentiment > 60 ? '#2ECC71' : entry.sentiment > 40 ? '#F59E0B' : '#EF4444'}
                     />
                   ))}
                 </Bar>
@@ -356,7 +409,7 @@ export function CandidateReport() {
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Eye Contact</p>
             </div>
           </div>
-          
+
           {/* Common Fillers */}
           {analytics.nlp_report.most_common_fillers?.length > 0 && (
             <div className="mt-4">
@@ -392,7 +445,7 @@ export function CandidateReport() {
               </button>
             )}
           </div>
-          
+
           {feedback ? (
             <div className="grid md:grid-cols-2 gap-6">
               {/* Strengths */}
@@ -410,7 +463,7 @@ export function CandidateReport() {
                   ))}
                 </ul>
               </div>
-              
+
               {/* Improvements */}
               <div>
                 <h3 className="font-medium text-amber-600 dark:text-amber-400 mb-3 flex items-center gap-2">
