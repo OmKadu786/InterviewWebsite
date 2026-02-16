@@ -301,6 +301,11 @@ async def video_websocket(websocket: WebSocket):
     except Exception as e:
         print(f"Video WebSocket error: {e}")
 
+@app.post("/api/stop-camera")
+async def stop_camera():
+    """Stop camera - handled client-side via WebRTC, this is a no-op acknowledgment"""
+    return {"status": "ok", "message": "Camera stop acknowledged"}
+
 @app.get("/report")
 async def get_report_data():
     """

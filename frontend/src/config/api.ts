@@ -27,7 +27,7 @@ const WS_BASE_URL = API_BASE_URL.replace('http', 'ws');
 
 export const WS_ENDPOINTS = {
   interview: `${WS_BASE_URL}/ws/interview`,
-  metrics: `${WS_BASE_URL}/ws/metrics`,
+  video: `${WS_BASE_URL}/ws/video`,
 };
 
 export default API_BASE_URL;

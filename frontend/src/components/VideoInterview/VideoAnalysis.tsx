@@ -12,17 +12,17 @@ interface VideoAnalysisProps {
     currentHint?: string | null;
 }
 
-export const VideoAnalysis: React.FC<VideoAnalysisProps> = ({ 
-    onReady, 
-    isAISpeaking = false, 
+export const VideoAnalysis: React.FC<VideoAnalysisProps> = ({
+    onReady,
+    isAISpeaking = false,
     isUserSpeaking = false,
-    currentHint = null 
+    currentHint = null
 }) => {
     const webcamRef = useRef<Webcam>(null);
     const wsRef = useRef<WebSocket | null>(null);
     const [elapsed, setElapsed] = useState(0);
     const [isConnected, setIsConnected] = useState(false);
-    
+
     // Smoothed metrics state with exponential moving average
     const [smoothedMetrics, setSmoothedMetrics] = useState({
         focus: 50,
@@ -30,13 +30,13 @@ export const VideoAnalysis: React.FC<VideoAnalysisProps> = ({
         confidence: 50,
         stress: 50,
     });
-    
-    
+
+
     // Smoothing factor (0.3 = 30% new value, 70% old value)
     const SMOOTHING_FACTOR = 0.3;
-    
+
     // Apply exponential moving average for smoother transitions
-    const smoothValue = (oldVal: number, newVal: number) => 
+    const smoothValue = (oldVal: number, newVal: number) =>
         Math.round(oldVal * (1 - SMOOTHING_FACTOR) + newVal * SMOOTHING_FACTOR);
 
     // Timer effect
@@ -59,15 +59,15 @@ export const VideoAnalysis: React.FC<VideoAnalysisProps> = ({
     // WebSocket connection and frame sending
     React.useEffect(() => {
         if (onReady) onReady();
-        
-        const ws = new WebSocket(WS_ENDPOINTS.metrics);
+
+        const ws = new WebSocket(WS_ENDPOINTS.video);
         wsRef.current = ws;
-        
+
         ws.onopen = () => {
             console.log("WebSocket connected for video analysis");
             setIsConnected(true);
         };
-        
+
         ws.onmessage = (event) => {
             try {
                 const data = JSON.parse(event.data);
@@ -82,16 +82,16 @@ export const VideoAnalysis: React.FC<VideoAnalysisProps> = ({
                 console.error("Metric Parse Error", e);
             }
         };
-        
+
         ws.onerror = (error) => {
             console.error("WebSocket error:", error);
         };
-        
+
         ws.onclose = () => {
             console.log("WebSocket closed");
             setIsConnected(false);
         };
-        
+
         return () => {
             if (wsRef.current) {
                 wsRef.current.close();
@@ -125,7 +125,7 @@ export const VideoAnalysis: React.FC<VideoAnalysisProps> = ({
 
     return (
         <div className="flex flex-col h-full gap-4">
-             {/* Main Video Card */}
+            {/* Main Video Card */}
             <div className="relative flex-1 rounded-2xl overflow-hidden bg-black/40 border border-border/30 shadow-2xl backdrop-blur-sm group">
                 <Webcam
                     ref={webcamRef}
@@ -139,18 +139,18 @@ export const VideoAnalysis: React.FC<VideoAnalysisProps> = ({
                     className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity"
                     mirrored={true}
                 />
-                
+
                 {/* Left: LIVE indicator */}
                 <div className="absolute top-4 left-4">
                     <div className={`backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 flex items-center gap-2 text-xs font-medium ${isConnected ? 'bg-black/60 text-emerald-400' : 'bg-red-900/60 text-red-400'}`}>
                         <span className="relative flex h-2 w-2">
-                          <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${isConnected ? 'bg-emerald-400' : 'bg-red-400'} opacity-75`}></span>
-                          <span className={`relative inline-flex rounded-full h-2 w-2 ${isConnected ? 'bg-emerald-500' : 'bg-red-500'}`}></span>
+                            <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${isConnected ? 'bg-emerald-400' : 'bg-red-400'} opacity-75`}></span>
+                            <span className={`relative inline-flex rounded-full h-2 w-2 ${isConnected ? 'bg-emerald-500' : 'bg-red-500'}`}></span>
                         </span>
                         {isConnected ? 'LIVE' : 'CONNECTING'}
                     </div>
                 </div>
-                
+
                 {/* Right: AI Badge + Timestamp */}
                 <div className="absolute top-4 right-4 flex items-center gap-3">
                     <AIAssistanceBadge isConnected={isConnected} />
@@ -161,7 +161,7 @@ export const VideoAnalysis: React.FC<VideoAnalysisProps> = ({
 
                 {/* Dynamic Overlay Messages */}
                 <AnimatePresence mode="wait">
-                    <motion.div 
+                    <motion.div
                         key={isAISpeaking ? 'ai' : isUserSpeaking ? 'user' : 'hint'}
                         initial={{ y: 20, opacity: 0 }}
                         animate={{ y: 0, opacity: 1 }}
@@ -209,26 +209,26 @@ export const VideoAnalysis: React.FC<VideoAnalysisProps> = ({
 
             {/* Metrics Panel - Using smoothed values */}
             <div className="grid grid-cols-3 gap-3">
-                 <MetricCard 
-                    label="Emotion" 
-                    value={smoothedMetrics.emotion} 
-                    icon={<Smile size={14} />} 
-                    color="text-yellow-400" 
-                    barColor="bg-yellow-400" 
+                <MetricCard
+                    label="Emotion"
+                    value={smoothedMetrics.emotion}
+                    icon={<Smile size={14} />}
+                    color="text-yellow-400"
+                    barColor="bg-yellow-400"
                 />
-                 <MetricCard 
-                    label="Focus" 
-                    value={smoothedMetrics.focus} 
-                    icon={<Activity size={14} />} 
-                    color="text-blue-400" 
-                    barColor="bg-blue-400" 
+                <MetricCard
+                    label="Focus"
+                    value={smoothedMetrics.focus}
+                    icon={<Activity size={14} />}
+                    color="text-blue-400"
+                    barColor="bg-blue-400"
                 />
-                 <MetricCard 
-                    label="Confidence" 
-                    value={smoothedMetrics.confidence} 
-                    icon={<Brain size={14} />} 
-                    color="text-purple-400" 
-                    barColor="bg-purple-400" 
+                <MetricCard
+                    label="Confidence"
+                    value={smoothedMetrics.confidence}
+                    icon={<Brain size={14} />}
+                    color="text-purple-400"
+                    barColor="bg-purple-400"
                 />
             </div>
         </div>
