@@ -2,18 +2,12 @@
 // Automatically detects the correct backend URL based on how the frontend is accessed
 
 // Get the current hostname (works for both localhost and network IP)
-const currentHost = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+// Hardcoded to localhost for debugging
+const API_BASE_URL = 'http://localhost:9000';
 
-// Determine the API base URL
-// - If VITE_API_URL is set (production), use that
-// - Otherwise, use the same hostname as the frontend but on port 8000
-const API_BASE_URL = import.meta.env.VITE_API_URL || `http://${currentHost}:8000`;
-
-console.log('HireByte API Config:', {
-  currentHost,
+console.log('HireByte API Config (Hardcoded):', {
   apiUrl: API_BASE_URL,
-  isProduction: import.meta.env.PROD,
-  hasEnvVar: !!import.meta.env.VITE_API_URL
+  originalEnvVar: import.meta.env.VITE_API_URL
 });
 
 export const API_ENDPOINTS = {
