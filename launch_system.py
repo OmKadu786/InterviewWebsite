@@ -10,6 +10,12 @@ def run_command(command, cwd, title):
         # status = subprocess.Popen(['start', 'cmd', '/k', command], shell=True, cwd=cwd)
         # We use a simplified start command for better reliability
         os.system(f'start "{title}" /D "{cwd}" cmd /k "{command}"')
+    elif sys.platform == "darwin":
+        # macOS
+        cwd_safe = cwd.replace('"', '\\"')
+        cmd_safe = command.replace('"', '\\"')
+        script = f'tell application "Terminal" to do script "cd \\"{cwd_safe}\\" && {cmd_safe}"'
+        subprocess.run(["osascript", "-e", script])
     else:
         print(f"Platform {sys.platform} not fully supported for auto-launch. Run manually: {command}")
 
@@ -20,8 +26,14 @@ def main():
 
     print("--- RIPIS LAUNCHER ---")
     print("0. Cleaning up ports...")
-    os.system("taskkill /F /IM python.exe >nul 2>&1")
-    os.system("taskkill /F /IM node.exe >nul 2>&1")
+    if sys.platform == "win32":
+        os.system("taskkill /F /IM python.exe >nul 2>&1")
+        os.system("taskkill /F /IM node.exe >nul 2>&1")
+    else:
+        # Kill processes on ports 8000 (Backend) and 5173 (Frontend)
+        os.system("lsof -ti:8000 | xargs kill -9 2>/dev/null")
+        os.system("lsof -ti:5173 | xargs kill -9 2>/dev/null")
+        
     time.sleep(1)
 
     print("1. Starting Backend (Port 8000)...")
