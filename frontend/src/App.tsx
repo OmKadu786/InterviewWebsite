@@ -10,6 +10,8 @@ import { ConsentModal } from './components/ConsentModal';
 import { WelcomeModal } from './components/WelcomeModal';
 import { HintLevelButtons, HintLevel } from './components/HintLevelButtons';
 import { Sparkles, Loader2, ArrowRight, Lightbulb } from 'lucide-react';
+import { AuthProvider } from './context/AuthContext';
+import { LoginModal } from './components/Auth/LoginModal';
 import { Hero } from './components/Home/Hero';
 import { API_ENDPOINTS } from './config/api';
 
@@ -30,6 +32,8 @@ function App() {
     // Show welcome modal if user hasn't agreed yet
     return localStorage.getItem('welcomeConsent') !== 'true';
   });
+  const [showLoginModal, setShowLoginModal] = useState(false);
+
 
   // Speaking state management for overlay messages
   const [isAISpeaking, setIsAISpeaking] = useState(false);
@@ -145,154 +149,166 @@ function App() {
 
   return (
     <ThemeProvider>
-      <Layout onDone={handleEndInterview} showDoneButton={view === 'interview'} showLoginButton={view === 'landing'}>
-        {view === 'landing' && (
-          <>
-            <Hero onStartConfirm={() => setView('setup')} />
-            <WelcomeModal
-              isOpen={showWelcomeModal}
-              onAgree={() => setShowWelcomeModal(false)}
+      <AuthProvider>
+        <Layout
+          onDone={handleEndInterview}
+          showDoneButton={view === 'interview'}
+          showLoginButton={view === 'landing'}
+          onLoginClick={() => setShowLoginModal(true)}
+        >
+          {view === 'landing' && (
+            <>
+              <Hero onStartConfirm={() => setView('setup')} />
+              <WelcomeModal
+                isOpen={showWelcomeModal}
+                onAgree={() => setShowWelcomeModal(false)}
+              />
+            </>
+          )}
+
+          {view === 'setup' && (
+            <div className="flex items-center justify-center min-h-[calc(100vh-4rem)] p-4">
+              <div className="w-full max-w-lg bg-card border border-border rounded-2xl p-8 shadow-2xl backdrop-blur-sm">
+                <div className="mb-6 text-center">
+                  <h2 className="text-2xl font-bold mb-2">
+                    <span className="text-hirebyte-mint">HireByte</span> Setup
+                  </h2>
+                  <p className="text-muted-foreground">Upload your resume to personalize the AI interview.</p>
+                </div>
+
+                <div className="space-y-6">
+                  <FileUpload onFileSelect={setSelectedFile} selectedFile={selectedFile} />
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Job Description</label>
+                    <textarea
+                      className="w-full p-3 bg-secondary/30 border border-input rounded-xl outline-none focus:ring-2 focus:ring-hirebyte-mint/30 min-h-[100px] resize-none"
+                      placeholder="Paste job requirements..."
+                      value={jobDescription}
+                      onChange={(e) => setJobDescription(e.target.value)}
+                    />
+                  </div>
+
+                  {/* Difficulty Level Selector */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Interview Difficulty</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {(['easy', 'medium', 'hard'] as const).map((level) => (
+                        <button
+                          key={level}
+                          onClick={() => setDifficulty(level)}
+                          className={`py-2 px-4 rounded-xl border text-sm font-medium transition-all ${difficulty === level
+                            ? 'bg-hirebyte-mint text-white border-hirebyte-mint'
+                            : 'bg-secondary/30 border-border hover:border-hirebyte-mint/50'
+                            }`}
+                        >
+                          {level.charAt(0).toUpperCase() + level.slice(1)}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {difficulty === 'easy' && 'Basic questions, friendly tone'}
+                      {difficulty === 'medium' && 'Standard interview, balanced difficulty'}
+                      {difficulty === 'hard' && 'Challenging questions, rigorous assessment'}
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={handleStartInterviewClick}
+                    disabled={!selectedFile || !jobDescription || isSubmitting}
+                    className="w-full py-3 bg-gradient-to-r from-hirebyte-blue to-hirebyte-blue-light text-white font-semibold rounded-xl flex items-center justify-center gap-2 hover:from-hirebyte-mint hover:to-emerald-500 transition-all duration-300 disabled:opacity-50"
+                  >
+                    {isSubmitting ? <Loader2 className="animate-spin" /> : <span>Start Interview <ArrowRight size={18} className="inline ml-1" /></span>}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {view === 'interview' && (
+            <InterviewLayout
+              leftPanel={
+                <div className="h-full flex flex-col gap-4 bg-card/30 border border-border/50 rounded-2xl p-4 overflow-y-auto backdrop-blur-sm">
+                  <div className="mb-4">
+                    <h3 className="font-semibold text-lg flex items-center gap-2 mb-1">
+                      <Sparkles size={16} className="text-hirebyte-mint" />
+                      Interview Setup
+                    </h3>
+                    <p className="text-xs text-muted-foreground">Resume & Job Analysis</p>
+                  </div>
+
+                  <div className="p-3 bg-secondary/50 rounded-xl text-sm border border-border/50">
+                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-2">Resume</span>
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded bg-red-500/20 text-red-500 flex items-center justify-center text-xs font-bold">PDF</div>
+                      <span className="truncate flex-1">{selectedFile?.name || "resume.pdf"}</span>
+                    </div>
+                  </div>
+
+                  <div className="p-3 bg-secondary/50 rounded-xl text-sm border border-border/50 flex-1 overflow-hidden flex flex-col">
+                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-2">Job Description</span>
+                    <p className="text-muted-foreground text-xs leading-relaxed overflow-y-auto whitespace-pre-wrap flex-1">
+                      {jobDescription || "No description provided."}
+                    </p>
+                  </div>
+
+                  {/* Hints Section */}
+                  <div className="mt-auto">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Lightbulb size={14} className="text-yellow-400" />
+                      <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">AI Hints</span>
+                    </div>
+                    <HintLevelButtons
+                      onRequestHint={handleHintRequest}
+                      isLoading={hintLoading}
+                    />
+                  </div>
+                </div>
+              }
+              centerPanel={
+                <VideoAnalysis
+                  isAISpeaking={isAISpeaking}
+                  isUserSpeaking={isUserSpeaking}
+                  currentHint={currentHint}
+                />
+              }
+              rightPanel={
+                <ChatBox
+                  onEnd={handleEndInterview}
+                  onAISpeakingChange={handleAISpeakingChange}
+                  onUserSpeakingChange={handleUserSpeakingChange}
+                />
+              }
             />
-          </>
-        )}
+          )}
 
-        {view === 'setup' && (
-          <div className="flex items-center justify-center min-h-[calc(100vh-4rem)] p-4">
-            <div className="w-full max-w-lg bg-card border border-border rounded-2xl p-8 shadow-2xl backdrop-blur-sm">
-              <div className="mb-6 text-center">
-                <h2 className="text-2xl font-bold mb-2">
-                  <span className="text-hirebyte-mint">HireByte</span> Setup
-                </h2>
-                <p className="text-muted-foreground">Upload your resume to personalize the AI interview.</p>
-              </div>
-
-              <div className="space-y-6">
-                <FileUpload onFileSelect={setSelectedFile} selectedFile={selectedFile} />
-
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Job Description</label>
-                  <textarea
-                    className="w-full p-3 bg-secondary/30 border border-input rounded-xl outline-none focus:ring-2 focus:ring-hirebyte-mint/30 min-h-[100px] resize-none"
-                    placeholder="Paste job requirements..."
-                    value={jobDescription}
-                    onChange={(e) => setJobDescription(e.target.value)}
-                  />
-                </div>
-
-                {/* Difficulty Level Selector */}
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Interview Difficulty</label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {(['easy', 'medium', 'hard'] as const).map((level) => (
-                      <button
-                        key={level}
-                        onClick={() => setDifficulty(level)}
-                        className={`py-2 px-4 rounded-xl border text-sm font-medium transition-all ${difficulty === level
-                          ? 'bg-hirebyte-mint text-white border-hirebyte-mint'
-                          : 'bg-secondary/30 border-border hover:border-hirebyte-mint/50'
-                          }`}
-                      >
-                        {level.charAt(0).toUpperCase() + level.slice(1)}
-                      </button>
-                    ))}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {difficulty === 'easy' && 'Basic questions, friendly tone'}
-                    {difficulty === 'medium' && 'Standard interview, balanced difficulty'}
-                    {difficulty === 'hard' && 'Challenging questions, rigorous assessment'}
-                  </p>
-                </div>
-
+          {view === 'analytics' && (
+            <div className="min-h-screen">
+              <div className="max-w-6xl mx-auto px-4 py-6">
                 <button
-                  onClick={handleStartInterviewClick}
-                  disabled={!selectedFile || !jobDescription || isSubmitting}
-                  className="w-full py-3 bg-gradient-to-r from-hirebyte-blue to-hirebyte-blue-light text-white font-semibold rounded-xl flex items-center justify-center gap-2 hover:from-hirebyte-mint hover:to-emerald-500 transition-all duration-300 disabled:opacity-50"
+                  onClick={() => setView('landing')}
+                  className="mb-4 px-4 py-2 text-sm text-hirebyte-mint hover:text-white transition-colors"
                 >
-                  {isSubmitting ? <Loader2 className="animate-spin" /> : <span>Start Interview <ArrowRight size={18} className="inline ml-1" /></span>}
+                  ← Back to Home
                 </button>
+                <CandidateReport />
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {view === 'interview' && (
-          <InterviewLayout
-            leftPanel={
-              <div className="h-full flex flex-col gap-4 bg-card/30 border border-border/50 rounded-2xl p-4 overflow-y-auto backdrop-blur-sm">
-                <div className="mb-4">
-                  <h3 className="font-semibold text-lg flex items-center gap-2 mb-1">
-                    <Sparkles size={16} className="text-hirebyte-mint" />
-                    Interview Setup
-                  </h3>
-                  <p className="text-xs text-muted-foreground">Resume & Job Analysis</p>
-                </div>
-
-                <div className="p-3 bg-secondary/50 rounded-xl text-sm border border-border/50">
-                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-2">Resume</span>
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded bg-red-500/20 text-red-500 flex items-center justify-center text-xs font-bold">PDF</div>
-                    <span className="truncate flex-1">{selectedFile?.name || "resume.pdf"}</span>
-                  </div>
-                </div>
-
-                <div className="p-3 bg-secondary/50 rounded-xl text-sm border border-border/50 flex-1 overflow-hidden flex flex-col">
-                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-2">Job Description</span>
-                  <p className="text-muted-foreground text-xs leading-relaxed overflow-y-auto whitespace-pre-wrap flex-1">
-                    {jobDescription || "No description provided."}
-                  </p>
-                </div>
-
-                {/* Hints Section */}
-                <div className="mt-auto">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Lightbulb size={14} className="text-yellow-400" />
-                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">AI Hints</span>
-                  </div>
-                  <HintLevelButtons
-                    onRequestHint={handleHintRequest}
-                    isLoading={hintLoading}
-                  />
-                </div>
-              </div>
-            }
-            centerPanel={
-              <VideoAnalysis
-                isAISpeaking={isAISpeaking}
-                isUserSpeaking={isUserSpeaking}
-                currentHint={currentHint}
-              />
-            }
-            rightPanel={
-              <ChatBox
-                onEnd={handleEndInterview}
-                onAISpeakingChange={handleAISpeakingChange}
-                onUserSpeakingChange={handleUserSpeakingChange}
-              />
-            }
+          {/* Consent Modal */}
+          <ConsentModal
+            isOpen={showConsentModal}
+            onAgree={handleConsentAgree}
+            onCancel={handleConsentCancel}
           />
-        )}
 
-        {view === 'analytics' && (
-          <div className="min-h-screen">
-            <div className="max-w-6xl mx-auto px-4 py-6">
-              <button
-                onClick={() => setView('landing')}
-                className="mb-4 px-4 py-2 text-sm text-hirebyte-mint hover:text-white transition-colors"
-              >
-                ← Back to Home
-              </button>
-              <CandidateReport />
-            </div>
-          </div>
-        )}
-
-        {/* Consent Modal */}
-        <ConsentModal
-          isOpen={showConsentModal}
-          onAgree={handleConsentAgree}
-          onCancel={handleConsentCancel}
-        />
-      </Layout>
+          <LoginModal
+            isOpen={showLoginModal}
+            onClose={() => setShowLoginModal(false)}
+          />
+        </Layout>
+      </AuthProvider>
     </ThemeProvider>
   );
 }

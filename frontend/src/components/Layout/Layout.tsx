@@ -1,16 +1,26 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useTheme } from '../../context/ThemeContext';
-import { Moon, Sun } from 'lucide-react';
+import { Moon, Sun, User, LogOut } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 
 interface LayoutProps {
   children: React.ReactNode;
   onDone?: () => void;
   showDoneButton?: boolean;
   showLoginButton?: boolean;
+  onLoginClick?: () => void;
 }
 
-export const Layout: React.FC<LayoutProps> = ({ children, onDone, showDoneButton = false, showLoginButton = false }) => {
+export const Layout: React.FC<LayoutProps> = ({ children, onDone, showDoneButton = false, showLoginButton = false, onLoginClick }) => {
   const { theme, toggleTheme } = useTheme();
+  const { user, signOut } = useAuth();
+  const [showUserMenu, setShowUserMenu] = useState(false);
+
+  const handleSignOut = async () => {
+    await signOut();
+    setShowUserMenu(false);
+  };
+
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col transition-colors duration-300">
@@ -34,14 +44,50 @@ export const Layout: React.FC<LayoutProps> = ({ children, onDone, showDoneButton
             >
               Done
             </button>
-          )}
-          {showLoginButton && (
-            <button
-              onClick={() => { }} // Placeholder for now
-              className="bg-white text-black px-5 py-2 rounded-lg text-sm font-semibold hover:bg-gray-200 transition-colors shadow-lg"
-            >
-              Login
-            </button>
+          )
+          }
+
+
+          {/* Auth Section */}
+          {user ? (
+            <div className="relative">
+              <button
+                onClick={() => setShowUserMenu(!showUserMenu)}
+                className="flex items-center gap-2 bg-secondary/50 hover:bg-secondary text-foreground pl-3 pr-4 py-1.5 rounded-full border border-border transition-colors group"
+              >
+                <div className="w-7 h-7 bg-hirebyte-mint/20 text-hirebyte-mint rounded-full flex items-center justify-center">
+                  <User size={14} />
+                </div>
+                <span className="text-sm font-medium max-w-[100px] truncate">
+                  {user.user_metadata?.full_name || user.email?.split('@')[0]}
+                </span>
+              </button>
+
+              {showUserMenu && (
+                <div className="absolute top-full right-0 mt-2 w-48 bg-card border border-border rounded-xl shadow-xl overflow-hidden py-1 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="px-4 py-3 border-b border-border/50">
+                    <p className="text-xs text-muted-foreground">Signed in as</p>
+                    <p className="text-sm font-medium truncate" title={user.email}>{user.email}</p>
+                  </div>
+                  <button
+                    onClick={handleSignOut}
+                    className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-red-500/10 flex items-center gap-2 transition-colors"
+                  >
+                    <LogOut size={14} />
+                    Sign Out
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            showLoginButton && (
+              <button
+                onClick={onLoginClick}
+                className="bg-white text-black px-5 py-2 rounded-lg text-sm font-semibold hover:bg-gray-200 transition-colors shadow-lg"
+              >
+                Login
+              </button>
+            )
           )}
           <button
             onClick={toggleTheme}
