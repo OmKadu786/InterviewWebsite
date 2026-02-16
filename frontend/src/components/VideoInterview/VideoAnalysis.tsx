@@ -159,46 +159,46 @@ export const VideoAnalysis: React.FC<VideoAnalysisProps> = ({
                     </div>
                 </div>
 
-                {/* Dynamic Overlay Messages */}
+                {/* Dynamic Overlay Messages — centered, themed to match site */}
                 <AnimatePresence mode="wait">
                     <motion.div
                         key={isAISpeaking ? 'ai' : isUserSpeaking ? 'user' : 'hint'}
                         initial={{ y: 20, opacity: 0 }}
                         animate={{ y: 0, opacity: 1 }}
                         exit={{ y: 20, opacity: 0 }}
-                        className="absolute bottom-6 left-1/2 -translate-x-1/2 w-auto min-w-[300px] max-w-md z-20"
+                        className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-sm z-20"
                     >
                         {isAISpeaking ? (
-                            <div className="bg-card/70 backdrop-blur-xl rounded-2xl px-6 py-4 shadow-[0_8px_32px_rgba(0,0,0,0.4)] flex items-center gap-4 border border-purple-500/30">
-                                <div className="p-2 bg-purple-500/20 rounded-lg text-purple-400 animate-pulse">
-                                    <Activity size={20} />
+                            <div className="bg-[#020617]/85 backdrop-blur-xl rounded-2xl px-5 py-3.5 shadow-[0_8px_32px_rgba(0,0,0,0.5)] flex items-center gap-3 border border-purple-500/25">
+                                <div className="p-2 bg-purple-500/20 rounded-lg text-purple-400 animate-pulse shrink-0">
+                                    <Activity size={18} />
                                 </div>
-                                <div className="flex flex-col flex-1">
-                                    <p className="text-sm font-bold text-white tracking-wide uppercase">AI Speaking</p>
-                                    <p className="text-xs text-purple-300/80">Listening carefully - Prepare your response</p>
+                                <div className="flex flex-col flex-1 min-w-0">
+                                    <p className="text-xs font-bold text-white tracking-wider uppercase">AI Speaking</p>
+                                    <p className="text-[11px] text-purple-300/80 truncate">Listening carefully — Prepare your response</p>
                                 </div>
                             </div>
                         ) : isUserSpeaking ? (
-                            <div className="bg-card/70 backdrop-blur-xl rounded-2xl px-6 py-4 shadow-[0_8px_32px_rgba(0,0,0,0.4)] flex items-center gap-4 border border-emerald-500/30">
-                                <div className="p-2 bg-emerald-500/20 rounded-lg text-emerald-400">
-                                    <Hand size={20} />
+                            <div className="bg-[#020617]/85 backdrop-blur-xl rounded-2xl px-5 py-3.5 shadow-[0_8px_32px_rgba(0,0,0,0.5)] flex items-center gap-3 border border-emerald-500/25">
+                                <div className="p-2 bg-emerald-500/20 rounded-lg text-emerald-400 shrink-0">
+                                    <Hand size={18} />
                                 </div>
-                                <div className="flex flex-col flex-1">
-                                    <p className="text-sm font-bold text-white tracking-wide uppercase">Analysising Response</p>
-                                    <p className="text-xs text-emerald-300/80">Maintain steady eye contact & clear articulation</p>
+                                <div className="flex flex-col flex-1 min-w-0">
+                                    <p className="text-xs font-bold text-white tracking-wider uppercase">Analysing Response</p>
+                                    <p className="text-[11px] text-emerald-300/80 truncate">Maintain steady eye contact & clear articulation</p>
                                 </div>
                             </div>
                         ) : (
-                            <div className="bg-card/70 backdrop-blur-xl rounded-2xl px-6 py-4 shadow-[0_8px_32px_rgba(0,0,0,0.4)] flex items-center gap-4 border border-blue-500/30">
-                                <div className="p-2 bg-blue-500/20 rounded-lg text-blue-400">
-                                    <Sparkles size={20} />
+                            <div className="bg-[#020617]/85 backdrop-blur-xl rounded-2xl px-5 py-3.5 shadow-[0_8px_32px_rgba(0,0,0,0.5)] flex items-center gap-3 border border-cyan-500/25">
+                                <div className="p-2 bg-cyan-500/20 rounded-lg text-cyan-400 shrink-0">
+                                    <Sparkles size={18} />
                                 </div>
-                                <div className="flex flex-col flex-1">
-                                    <p className="text-base font-bold text-white tracking-wide">
+                                <div className="flex flex-col flex-1 min-w-0">
+                                    <p className="text-xs font-bold text-white tracking-wider uppercase">
                                         {currentHint ? "💡 Suggestion Tip" : "✨ Your Turn"}
                                     </p>
-                                    <p className="text-xs text-blue-300/90 leading-snug font-medium">
-                                        {currentHint || "Turn on mic and speak confidently - Share your relevant experience"}
+                                    <p className="text-[11px] text-cyan-300/90 leading-snug font-medium truncate">
+                                        {currentHint || "Turn on mic and speak confidently"}
                                     </p>
                                 </div>
                             </div>

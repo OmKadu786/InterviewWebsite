@@ -551,9 +551,68 @@ async def get_analytics():
         # Scale LLM-evaluated accuracy (1-10) to 0-100 for the radar chart
         technical_accuracy = scores_summary["overall_accuracy"] * 10
         communication_score = scores_summary["overall_clarity"] * 10
+        # Reasoning = average of depth + accuracy
+        reasoning_score = ((scores_summary.get("overall_depth", 5) + scores_summary.get("overall_accuracy", 5)) / 2) * 10
     else:
         technical_accuracy = min(100, avg_confidence + 15)
         communication_score = min(100, avg_emotion + 20)
+        reasoning_score = min(100, (avg_confidence + avg_focus) / 2 + 10)
+    
+    # Autonomy score: based on hint usage (fewer hints = more autonomous)
+    hint_usage = state.hint_usage if state else {}
+    total_hints_used = sum(len(levels) for levels in hint_usage.values()) if hint_usage else 0
+    total_qs = scores_summary.get("total_questions", 1) if scores_summary else 1
+    hint_penalty = min(50, total_hints_used * 15)  # Each hint reduces autonomy
+    autonomy_score = max(20, 100 - hint_penalty)
+    
+    # Topic mastery data for radar chart (DSA, OS, DBMS, etc.)
+    topic_mastery = {}
+    if scores_summary and scores_summary.get("per_category"):
+        for cat_name, cat_data in scores_summary["per_category"].items():
+            cat_lower = cat_name.lower()
+            if any(kw in cat_lower for kw in ["dsa", "algorithm", "data structure", "coding"]):
+                topic_mastery["DSA"] = min(100, cat_data.get("avg_accuracy", 5) * 10)
+            elif any(kw in cat_lower for kw in ["os", "operating", "system"]):
+                topic_mastery["OS"] = min(100, cat_data.get("avg_accuracy", 5) * 10)
+            elif any(kw in cat_lower for kw in ["db", "database", "sql", "dbms"]):
+                topic_mastery["DBMS"] = min(100, cat_data.get("avg_accuracy", 5) * 10)
+            elif any(kw in cat_lower for kw in ["network", "protocol"]):
+                topic_mastery["Networking"] = min(100, cat_data.get("avg_accuracy", 5) * 10)
+            else:
+                topic_mastery[cat_name[:12]] = min(100, cat_data.get("avg_accuracy", 5) * 10)
+    
+    # Defaults if no topic data
+    if not topic_mastery:
+        topic_mastery = {
+            "DSA": technical_accuracy * 0.9,
+            "OS": technical_accuracy * 0.85,
+            "DBMS": technical_accuracy * 0.8,
+            "Networking": communication_score * 0.7,
+            "Soft Skills": communication_score * 0.9
+        }
+    
+    # Clarity timeline (for Thinking Flow chart) — per-question clarity
+    clarity_timeline = []
+    if scores_summary and scores_summary.get("per_question"):
+        for i, q_data in enumerate(scores_summary["per_question"]):
+            clarity = ((q_data.get("clarity", 5) + q_data.get("depth", 5)) / 2) * 10
+            clarity_timeline.append({
+                "question": f"Q{i+1}",
+                "clarity": min(100, clarity),
+                "status": "flowing" if clarity >= 60 else "stuck"
+            })
+    elif metrics:
+        # Fallback: derive from confidence metrics
+        segment_size = max(1, len(metrics) // 5)
+        for i in range(0, len(metrics), segment_size):
+            seg = metrics[i:i+segment_size]
+            if seg:
+                avg_c = sum(m["confidence"] for m in seg) / len(seg)
+                clarity_timeline.append({
+                    "question": f"Q{len(clarity_timeline)+1}",
+                    "clarity": avg_c,
+                    "status": "flowing" if avg_c >= 60 else "stuck"
+                })
     
     return {
         "radar_chart_data": {
@@ -561,7 +620,9 @@ async def get_analytics():
             "communication": communication_score,
             "confidence": avg_confidence,
             "focus": avg_focus,
-            "emotional_intelligence": avg_emotion
+            "emotional_intelligence": avg_emotion,
+            "reasoning": reasoning_score,
+            "autonomy": autonomy_score
         },
         "vision_analytics": {
             "overall_eye_contact_percentage": avg_focus,
@@ -579,6 +640,8 @@ async def get_analytics():
             "average_score": (avg_focus + avg_emotion + avg_confidence) / 3,
             "scores_over_time": [m["confidence"] for m in metrics[-10:]]
         },
+        "topic_mastery": topic_mastery,
+        "clarity_timeline": clarity_timeline,
         "answer_evaluation": scores_summary
     }
 
@@ -728,8 +791,8 @@ async def get_hint_status():
 if __name__ == "__main__":
     import uvicorn
     print("Starting HireByte Backend Server...")
-    print("Server: http://localhost:8000")
-    print("API Docs: http://localhost:8000/docs")
+    print("Server: http://localhost:9000")
+    print("API Docs: http://localhost:9000/docs")
     print("Press CTRL+C to stop\n")
     
     # FIXED: Changed "main:app" to app

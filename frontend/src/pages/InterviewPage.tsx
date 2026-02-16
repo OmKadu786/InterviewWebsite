@@ -143,12 +143,6 @@ export const InterviewPage: React.FC = () => {
                             availableLevel={availableHintLevel}
                             topic={hintTopic}
                         />
-                        <button
-                            onClick={handleEndInterview}
-                            className="w-full py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 rounded-lg text-sm font-medium transition-colors"
-                        >
-                            End Interview
-                        </button>
                     </div>
                 </div>
 
