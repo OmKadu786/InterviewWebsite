@@ -111,10 +111,10 @@ No explanation, no markdown, just the JSON object."""
         return {"accuracy": 5, "depth": 5, "clarity": 5}
 
 
-async def get_hint(question, resume_text, job_desc, level="medium"):
+async def get_hint(question, resume_text, job_desc, level="medium", topic="General"):
     """
-    Generate contextual hints based on resume and job description.
-    Supports three levels: small, medium, full
+    Generate topic-aware, progressive hints based on resume and job description.
+    Supports three levels: small (direction), medium (approach), full (partial outline)
     """
     
     level_instructions = {
@@ -133,11 +133,12 @@ async def get_hint(question, resume_text, job_desc, level="medium"):
             - Help them structure their thinking
         """,
         "full": """
-            Provide a comprehensive answer guide.
-            - Include key points to mention
-            - Suggest a structure for the answer
-            - Can include specific examples from their resume
-            - Still encourage them to express in their own words
+            Provide a PARTIAL solution outline only.
+            - Show the key steps or structure of the solution
+            - Include 2-3 critical points to mention
+            - Do NOT give the complete answer
+            - Leave gaps for the candidate to fill in themselves
+            - Can reference their resume/projects for context
         """
     }
     
@@ -150,16 +151,21 @@ async def get_hint(question, resume_text, job_desc, level="medium"):
     
     CANDIDATE'S RESUME: {resume_text}
     
+    QUESTION TOPIC: {topic}
     The interviewer just asked: "{question}"
     
     HINT LEVEL: {level.upper()}
     {hint_level}
     
     IMPORTANT GUIDELINES:
+    - Tailor your hint specifically to the {topic} domain
     - Base your hints on the candidate's ACTUAL resume and experience
     - Reference specific projects, skills, or experiences from their resume when relevant
     - Be encouraging and professional
     - Help them connect their experience to the job requirements
+    - For DSA questions: focus on algorithmic thinking and data structure choice
+    - For OS questions: focus on process/memory/scheduling concepts
+    - For DBMS questions: focus on schema design, normalization, query optimization
     """
     
     messages = [{"role": "system", "content": system_prompt}]
@@ -174,63 +180,3 @@ async def get_hint(question, resume_text, job_desc, level="medium"):
     except Exception as e:
         print(f"OpenAI Error (Hint): {e}")
         return "Focus on your relevant experience and how it aligns with the job requirements."
-
-
-async def generate_feedback(candidate_summary: str, job_desc: str, transcript: list) -> dict:
-    """
-    Generate comprehensive feedback including strengths and areas for improvement.
-    """
-    
-    # Create a simplified transcript string for context
-    conversation_text = ""
-    # Use last 10 exchanges for context
-    messages = transcript[-20:] # ~10 QA pairs
-    
-    for entry in messages:
-        role = "Interviewer" if entry["role"] == "ai" else "Candidate"
-        conversation_text += f"{role}: {entry['content']}\n"
-    
-    prompt = f"""
-    You are an expert interview coach. Analyze this candidates performance based on their resume and the recent interview transcript.
-    
-    JOB ROLE: {job_desc}
-    CANDIDATE PROFILE: {candidate_summary}
-    
-    TRANSCRIPT EXCERPT:
-    {conversation_text}
-    
-    Provide helpful feedback in two categories:
-    1. Strengths: What did the candidate do well? (Skills, communication, confidence, specific answers)
-    2. Areas for Improvement: What specific things should they work on? (Missing keywords, vagueness, structure)
-    
-    Return ONLY a valid JSON object with this structure:
-    {{
-        "strengths": ["point 1", "point 2", "point 3"],
-        "improvements": ["point 1", "point 2", "point 3"]
-    }}
-    Do not include any explanation or markdown formatting. Just the JSON.
-    """
-    
-    try:
-        response = await client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[{"role": "system", "content": prompt}],
-            temperature=0.3,
-            max_tokens=400
-        )
-        
-        raw = response.choices[0].message.content.strip()
-        
-        # Clean potential markdown fences
-        if "```" in raw:
-            raw = raw.replace("```json", "").replace("```", "")
-        
-        return json.loads(raw)
-            
-    except Exception as e:
-        print(f"Feedback generation error: {e}")
-        # Return fallback feedback so UI doesn't break
-        return {
-            "strengths": ["Demonstrated good technical knowledge", "Clear communication style"],
-            "improvements": ["Could provide more specific examples", "Work on structuring answers using STAR method"]
-        }

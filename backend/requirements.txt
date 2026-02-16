@@ -1,0 +1,10 @@
+fastapi
+uvicorn[standard]
+openai
+
+PyPDF2
+python-dotenv
+python-multipart
+pydantic
+websockets
+opencv-python-headless

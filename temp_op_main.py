@@ -598,8 +598,6 @@ async def get_comparison(user_id: str, job_role: str):
         raise HTTPException(status_code=404, detail="No data available")
     return comparison
 
-from services.report_generator import generate_report
-
 @app.get("/api/session/weakness-analysis")
 async def get_session_weakness():
     """Get weakness analysis for the current session"""
@@ -617,30 +615,6 @@ async def get_session_weakness():
         "logical_errors": state.logical_errors,
         "question_topics": state.question_topics
     }
-
-class SaveSessionRequest(BaseModel):
-    user_id: str
-
-@app.post("/api/session/save")
-async def save_current_session(request: SaveSessionRequest):
-    """
-    Generates a full report from the current in-memory session 
-    and saves it to the database for the given user_id.
-    """
-    if not session_data.get("transcript"):
-         raise HTTPException(status_code=400, detail="No active session data to save")
-         
-    try:
-        # Generate the report object
-        report = generate_report(session_data, request.user_id)
-        
-        # Save to DB
-        interview_id = await InterviewService.save_interview(report)
-        
-        return {"interview_id": interview_id, "message": "Session saved successfully"}
-    except Exception as e:
-        print(f"Error saving session: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/session/hint-status")
 async def get_hint_status():

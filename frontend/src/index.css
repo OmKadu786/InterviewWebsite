@@ -101,3 +101,49 @@
 .animate-waveform {
   animation: waveform 0.8s ease-in-out infinite;
 }
+
+/* ── Badge Pill Styles ── */
+.badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px 4px 8px;
+  border-radius: 9999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: nowrap;
+  user-select: none;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  /* Light mode defaults */
+  background: color-mix(in srgb, var(--badge-color) 12%, #ffffff);
+  border: 1px solid color-mix(in srgb, var(--badge-color) 25%, transparent);
+  color: color-mix(in srgb, var(--badge-color) 85%, #1a1a1a);
+}
+.badge-pill:hover {
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--badge-color) 20%, transparent);
+}
+.badge-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--badge-color);
+  box-shadow: 0 0 4px color-mix(in srgb, var(--badge-color) 50%, transparent);
+}
+.badge-label {
+  letter-spacing: 0.01em;
+}
+
+/* Dark mode overrides */
+:root .badge-pill {
+  background: color-mix(in srgb, var(--badge-color) 15%, #111111);
+  border-color: color-mix(in srgb, var(--badge-color) 30%, transparent);
+  color: color-mix(in srgb, var(--badge-color) 60%, #ffffff);
+}
+.light .badge-pill {
+  background: color-mix(in srgb, var(--badge-color) 12%, #ffffff);
+  border-color: color-mix(in srgb, var(--badge-color) 25%, transparent);
+  color: color-mix(in srgb, var(--badge-color) 85%, #1a1a1a);
+}
