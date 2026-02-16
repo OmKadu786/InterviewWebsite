@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from 'react';
+import { Panel, Group, Separator } from 'react-resizable-panels';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { VideoAnalysis } from '../components/VideoInterview/VideoAnalysis';
 import { ChatBox } from '../components/Interview/ChatBox';
@@ -103,84 +104,98 @@ export const InterviewPage: React.FC = () => {
     };
 
     return (
-        <div className="h-[calc(100vh-4rem)] p-4 md:p-6 overflow-hidden relative">
-            <div className="max-w-[1920px] mx-auto h-full grid grid-cols-1 lg:grid-cols-12 gap-4">
+        <div className="h-[calc(100vh-4rem)] p-2 overflow-hidden relative">
+            <Group id="interview-layout-v4" orientation="horizontal" className="max-w-[1920px] mx-auto h-full">
 
                 {/* Left Panel: Context & Inputs */}
-                <div className="lg:col-span-2 h-full min-h-0 flex flex-col gap-4 bg-card/30 border border-border/50 rounded-2xl p-4 overflow-y-auto backdrop-blur-sm">
-                    <div className="mb-4">
-                        <h3 className="font-semibold text-lg flex items-center gap-2 mb-1">
-                            <Sparkles size={16} className="text-hirebyte-mint" />
-                            Interview Setup
-                        </h3>
-                        <p className="text-xs text-muted-foreground">Resume & Job Analysis</p>
-                    </div>
+                <Panel id="left-panel" defaultSize="25" minSize="20" maxSize="40" className="mr-2">
+                    <div className="h-full flex flex-col gap-4 bg-card/30 border border-border/50 rounded-2xl p-4 overflow-y-auto backdrop-blur-sm">
+                        <div className="mb-4">
+                            <h3 className="font-semibold text-lg flex items-center gap-2 mb-1">
+                                <Sparkles size={16} className="text-hirebyte-mint" />
+                                Interview Setup
+                            </h3>
+                            <p className="text-xs text-muted-foreground">Resume & Job Analysis</p>
+                        </div>
 
-                    <div className="p-3 bg-secondary/50 rounded-xl text-sm border border-border/50">
-                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-2">Resume</span>
-                        <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded bg-red-500/20 text-red-500 flex items-center justify-center text-xs font-bold">PDF</div>
-                            <span className="truncate flex-1">{selectedFile?.name || "resume.pdf"}</span>
+                        <div className="p-3 bg-secondary/50 rounded-xl text-sm border border-border/50">
+                            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-2">Resume</span>
+                            <div className="flex items-center gap-2">
+                                <div className="w-8 h-8 rounded bg-red-500/20 text-red-500 flex items-center justify-center text-xs font-bold">PDF</div>
+                                <span className="truncate flex-1">{selectedFile?.name || "resume.pdf"}</span>
+                            </div>
+                        </div>
+
+                        <div className="p-3 bg-secondary/50 rounded-xl text-sm border border-border/50 flex-1 overflow-hidden flex flex-col">
+                            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-2">Job Description</span>
+                            <p className="text-muted-foreground text-xs leading-relaxed overflow-y-auto whitespace-pre-wrap flex-1">
+                                {jobDescription || "No description provided."}
+                            </p>
+                        </div>
+
+                        {/* Hints Section */}
+                        <div className="mt-auto space-y-4">
+                            <div className="flex items-center gap-2 mb-2">
+                                <Lightbulb size={14} className="text-yellow-400" />
+                                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">AI Hints</span>
+                            </div>
+                            <HintLevelButtons
+                                onRequestHint={handleHintRequest}
+                                isLoading={hintLoading}
+                                availableLevel={availableHintLevel}
+                                topic={hintTopic}
+                            />
+                            <button
+                                onClick={handleEndInterview}
+                                className="w-full py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 rounded-lg text-sm font-medium transition-colors"
+                            >
+                                End Interview
+                            </button>
                         </div>
                     </div>
+                </Panel>
 
-                    <div className="p-3 bg-secondary/50 rounded-xl text-sm border border-border/50 flex-1 overflow-hidden flex flex-col">
-                        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-2">Job Description</span>
-                        <p className="text-muted-foreground text-xs leading-relaxed overflow-y-auto whitespace-pre-wrap flex-1">
-                            {jobDescription || "No description provided."}
-                        </p>
-                    </div>
-
-                    {/* Hints Section */}
-                    <div className="mt-auto space-y-4">
-                        <div className="flex items-center gap-2 mb-2">
-                            <Lightbulb size={14} className="text-yellow-400" />
-                            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">AI Hints</span>
-                        </div>
-                        <HintLevelButtons
-                            onRequestHint={handleHintRequest}
-                            isLoading={hintLoading}
-                            availableLevel={availableHintLevel}
-                            topic={hintTopic}
-                        />
-                        <button
-                            onClick={handleEndInterview}
-                            className="w-full py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 rounded-lg text-sm font-medium transition-colors"
-                        >
-                            End Interview
-                        </button>
-                    </div>
-                </div>
+                <Separator className="w-2 mx-1 rounded-full bg-border/20 hover:bg-hirebyte-mint/50 transition-colors cursor-col-resize flex flex-col justify-center items-center gap-1">
+                    <div className="w-1 h-8 bg-muted-foreground/20 rounded-full" />
+                </Separator>
 
                 {/* Center Panel: Video Stream */}
-                <div className="lg:col-span-7 h-full min-h-0 flex flex-col">
-                    <VideoAnalysis
-                        isAISpeaking={isAISpeaking}
-                        isUserSpeaking={isUserSpeaking}
-                        currentHint={currentHint}
-                    />
-                </div>
+                <Panel id="center-panel" defaultSize="50" minSize="30">
+                    <div className="h-full flex flex-col">
+                        <VideoAnalysis
+                            isAISpeaking={isAISpeaking}
+                            isUserSpeaking={isUserSpeaking}
+                            currentHint={currentHint}
+                        />
+                    </div>
+                </Panel>
+
+                <Separator className="w-2 mx-1 rounded-full bg-border/20 hover:bg-hirebyte-mint/50 transition-colors cursor-col-resize flex flex-col justify-center items-center gap-1">
+                    <div className="w-1 h-8 bg-muted-foreground/20 rounded-full" />
+                </Separator>
 
                 {/* Right Panel: Chat + Real-time Feedback */}
-                <div className="lg:col-span-3 h-full min-h-0 flex flex-col gap-2">
-                    <LogicFeedback
-                        feedback={logicFeedback}
-                        onDismiss={() => setLogicFeedback(null)}
-                    />
-                    <SpeechFeedback
-                        feedback={speechFeedback}
-                        onDismiss={() => setSpeechFeedback(null)}
-                    />
-                    <ChatBox
-                        onEnd={handleEndInterview}
-                        onAISpeakingChange={handleAISpeakingChange}
-                        onUserSpeakingChange={handleUserSpeakingChange}
-                        onLogicFeedback={handleLogicFeedback}
-                        onSpeechFeedback={handleSpeechFeedback}
-                    />
-                </div>
+                <Panel id="right-panel" defaultSize="25" minSize="20" className="ml-2">
+                    <div className="h-full flex flex-col gap-2">
+                        <LogicFeedback
+                            feedback={logicFeedback}
+                            onDismiss={() => setLogicFeedback(null)}
+                        />
+                        <SpeechFeedback
+                            feedback={speechFeedback}
+                            onDismiss={() => setSpeechFeedback(null)}
+                        />
+                        <ChatBox
+                            onEnd={handleEndInterview}
+                            onAISpeakingChange={handleAISpeakingChange}
+                            onUserSpeakingChange={handleUserSpeakingChange}
+                            onLogicFeedback={handleLogicFeedback}
+                            onSpeechFeedback={handleSpeechFeedback}
+                        />
+                    </div>
+                </Panel>
 
-            </div>
+            </Group>
         </div>
     );
 };

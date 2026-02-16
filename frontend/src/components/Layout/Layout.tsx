@@ -37,15 +37,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, onDone, showDoneButton
 
         {/* Right side buttons - opposite to HireByte logo */}
         <div className="flex items-center gap-3">
-          {showDoneButton && onDone && (
-            <button
-              onClick={onDone}
-              className="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 text-white px-4 py-2 rounded-full text-sm font-medium transition-colors border border-white/10 shadow-lg"
-            >
-              Done
-            </button>
-          )
-          }
+
 
           {/* Auth Section */}
           {user ? (

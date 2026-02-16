@@ -76,5 +76,10 @@ class InterviewReport(BaseModel):
     # Feature 2/3: Logical errors
     logical_errors: Optional[List[Dict[str, Any]]] = None  # [{question_index, issue_type, feedback, severity}]
     
-    # Feature 1: Topic classifications
-    topic_classifications: Optional[Dict[str, str]] = None  # {question_index: "DSA"|"OS"|...}
+    # Feature 1: Topic classifications (Renamed to match report_generator usage)
+    question_topics: Optional[Dict[str, str]] = None  # {question_index: "DSA"|"OS"|...}
+    
+    # Feature 3: Per-question timing (Renamed to match usage if needed, or matched in generator)
+    # report_generator uses: report.time_per_question = state.question_timestamps
+    # BUT state keys might be integers, Pydantic dictates Dict keys as str usually for JSON
+    time_per_question: Optional[Dict[str, float]] = None
