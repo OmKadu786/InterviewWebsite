@@ -100,14 +100,25 @@ export const InterviewPage: React.FC = () => {
                 if (res.ok) {
                     const data = await res.json();
                     if (data.interview_id) {
+                        // REQUIRED: Open PDF immediately in new tab
+                        const pdfUrl = `${API_ENDPOINTS.analytics}/../interview/${data.interview_id}/download`;
+                        window.open(pdfUrl, '_blank');
+
+                        // Navigate to detail view
                         navigate(`/analytics?id=${data.interview_id}`);
                         return;
                     }
+                } else {
+                    console.error("Save failed", res.statusText);
+                    alert("Failed to save report! The 'interviews' table might be missing in Supabase. Please run the provided SQL script.");
                 }
             }
         } catch (error) {
             console.error('Error ending interview:', error);
+            alert("An error occurred while saving the interview.");
         }
+        // Only navigate to history if we couldn't show the specific report, 
+        // but getting here meant something went wrong.
         navigate('/analytics');
     };
 
