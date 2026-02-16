@@ -1,3 +1,5 @@
+from typing import Optional
+
 class InterviewState:
     """
     Tracks interview progress through the predefined plan.
@@ -14,7 +16,7 @@ class InterviewState:
         self.is_complete = False
         self.current_question_text = ""  # Track the last question asked
     
-    def get_current_step(self) -> dict | None:
+    def get_current_step(self) -> Optional[dict]:
         """
         Get the current interview step (category + topic to ask about).
         Returns None if the interview is complete.
