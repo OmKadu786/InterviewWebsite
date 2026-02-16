@@ -41,7 +41,7 @@ Rules:
 - Return ONLY the JSON, no explanation"""
 
 
-async def generate_interview_plan(profile: dict, job_description: str) -> dict:
+async def generate_interview_plan(profile: dict, job_description: str, difficulty: str = "") -> dict:
     """
     Generate a fixed interview plan based on the candidate's profile.
     This runs ONCE at the start of the interview session.
@@ -49,12 +49,18 @@ async def generate_interview_plan(profile: dict, job_description: str) -> dict:
     Args:
         profile: Structured profile from resume_analyzer
         job_description: The job description text
+        difficulty: User-selected difficulty (easy/medium/hard). If empty, auto-detect from profile.
     
     Returns:
         A structured interview plan dict
     """
     # Build a compact profile representation for the planning prompt 
     profile_text = json.dumps(profile, indent=2)
+    
+    # Add difficulty override instruction if user selected one
+    difficulty_instruction = ""
+    if difficulty in ("easy", "medium", "hard"):
+        difficulty_instruction = f"\n\nIMPORTANT: The user has selected '{difficulty}' difficulty. You MUST set difficulty_baseline to '{difficulty}' and set ALL category difficulties accordingly. Do NOT override this based on experience level."
     
     try:
         response = await client.chat.completions.create(
@@ -63,7 +69,7 @@ async def generate_interview_plan(profile: dict, job_description: str) -> dict:
                 {"role": "system", "content": PLAN_PROMPT},
                 {
                     "role": "user", 
-                    "content": f"CANDIDATE PROFILE:\n{profile_text}\n\nJOB DESCRIPTION:\n{job_description}"
+                    "content": f"CANDIDATE PROFILE:\n{profile_text}\n\nJOB DESCRIPTION:\n{job_description}{difficulty_instruction}"
                 }
             ],
             temperature=0.4,
@@ -83,6 +89,14 @@ async def generate_interview_plan(profile: dict, job_description: str) -> dict:
         
         # Validate and fix the plan structure
         plan = _validate_plan(plan, profile)
+        
+        # Override difficulty_baseline if user explicitly selected one
+        if difficulty in ("easy", "medium", "hard"):
+            plan["difficulty_baseline"] = difficulty
+            for cat in plan.get("categories", []):
+                # Keep intro/closing as easy, override the rest
+                if cat["name"] not in ("introduction", "closing"):
+                    cat["difficulty"] = difficulty
         
         return plan
         
@@ -205,5 +219,183 @@ def _fallback_plan(profile: dict) -> dict:
         "total_questions": sum(c["count"] for c in categories),
         "estimated_duration_minutes": 25,
         "difficulty_baseline": difficulty,
+        "categories": categories
+    }
+
+
+def generate_topic_plan(topic: str, difficulty: str = "medium") -> dict:
+    """
+    Generate a fixed interview plan for a specific topic (no resume needed).
+    Used when the user selects topic-based practice instead of uploading a resume.
+    
+    Args:
+        topic: One of AI_ML, DSA, WEB_DEV
+        difficulty: easy, medium, or hard
+    
+    Returns:
+        A structured interview plan dict
+    """
+    topic_configs = {
+        "AI_ML": {
+            "label": "AI / Machine Learning",
+            "categories": [
+                {
+                    "name": "introduction",
+                    "count": 1,
+                    "difficulty": "easy",
+                    "topics": ["candidate background in AI/ML"],
+                    "purpose": "warm up and understand AI/ML experience"
+                },
+                {
+                    "name": "technical_skills",
+                    "count": 3,
+                    "difficulty": difficulty,
+                    "topics": [
+                        "supervised vs unsupervised learning and when to use each",
+                        "neural network architectures (CNNs, RNNs, Transformers)",
+                        "model evaluation metrics (precision, recall, F1, AUC-ROC)"
+                    ],
+                    "purpose": "assess core ML knowledge"
+                },
+                {
+                    "name": "project_deep_dive",
+                    "count": 2,
+                    "difficulty": difficulty,
+                    "topics": [
+                        "end-to-end ML pipeline design (data collection, preprocessing, training, deployment)",
+                        "handling overfitting, data imbalance, and feature engineering"
+                    ],
+                    "purpose": "evaluate practical ML experience"
+                },
+                {
+                    "name": "gap_probing",
+                    "count": 2,
+                    "difficulty": difficulty,
+                    "topics": [
+                        "MLOps and model deployment in production",
+                        "ethical AI, bias detection, and responsible ML practices"
+                    ],
+                    "purpose": "probe advanced AI/ML concepts"
+                },
+                {
+                    "name": "closing",
+                    "count": 1,
+                    "difficulty": "easy",
+                    "topics": ["wrap up and candidate questions"],
+                    "purpose": "close the interview"
+                }
+            ]
+        },
+        "DSA": {
+            "label": "Data Structures & Algorithms",
+            "categories": [
+                {
+                    "name": "introduction",
+                    "count": 1,
+                    "difficulty": "easy",
+                    "topics": ["candidate background in programming and problem solving"],
+                    "purpose": "warm up"
+                },
+                {
+                    "name": "technical_skills",
+                    "count": 3,
+                    "difficulty": difficulty,
+                    "topics": [
+                        "arrays, linked lists, stacks, and queues — operations and time complexity",
+                        "trees and graphs — traversal algorithms (BFS, DFS), binary search trees",
+                        "hash maps, heaps, and their real-world applications"
+                    ],
+                    "purpose": "assess data structure fundamentals"
+                },
+                {
+                    "name": "project_deep_dive",
+                    "count": 2,
+                    "difficulty": difficulty,
+                    "topics": [
+                        "sorting and searching algorithms — trade-offs between merge sort, quick sort, binary search",
+                        "dynamic programming — identifying subproblems, memoization vs tabulation"
+                    ],
+                    "purpose": "evaluate algorithmic thinking"
+                },
+                {
+                    "name": "gap_probing",
+                    "count": 2,
+                    "difficulty": difficulty,
+                    "topics": [
+                        "time and space complexity analysis (Big-O notation)",
+                        "greedy algorithms vs dynamic programming — when to use which"
+                    ],
+                    "purpose": "probe problem-solving depth"
+                },
+                {
+                    "name": "closing",
+                    "count": 1,
+                    "difficulty": "easy",
+                    "topics": ["wrap up and candidate questions"],
+                    "purpose": "close the interview"
+                }
+            ]
+        },
+        "WEB_DEV": {
+            "label": "Web Development",
+            "categories": [
+                {
+                    "name": "introduction",
+                    "count": 1,
+                    "difficulty": "easy",
+                    "topics": ["candidate background in web development"],
+                    "purpose": "warm up"
+                },
+                {
+                    "name": "technical_skills",
+                    "count": 3,
+                    "difficulty": difficulty,
+                    "topics": [
+                        "HTML/CSS fundamentals — semantic HTML, Flexbox, Grid, responsive design",
+                        "JavaScript core — closures, promises, async/await, event loop",
+                        "frontend frameworks — React component lifecycle, state management, hooks"
+                    ],
+                    "purpose": "assess frontend knowledge"
+                },
+                {
+                    "name": "project_deep_dive",
+                    "count": 2,
+                    "difficulty": difficulty,
+                    "topics": [
+                        "backend development — REST APIs, authentication, database design",
+                        "full-stack architecture — client-server communication, deployment, CI/CD"
+                    ],
+                    "purpose": "evaluate full-stack understanding"
+                },
+                {
+                    "name": "gap_probing",
+                    "count": 2,
+                    "difficulty": difficulty,
+                    "topics": [
+                        "web performance optimization — lazy loading, caching, CDNs, bundle optimization",
+                        "web security — XSS, CSRF, CORS, authentication best practices"
+                    ],
+                    "purpose": "probe advanced web concepts"
+                },
+                {
+                    "name": "closing",
+                    "count": 1,
+                    "difficulty": "easy",
+                    "topics": ["wrap up and candidate questions"],
+                    "purpose": "close the interview"
+                }
+            ]
+        }
+    }
+    
+    config = topic_configs.get(topic, topic_configs["DSA"])
+    categories = config["categories"]
+    
+    return {
+        "total_questions": sum(c["count"] for c in categories),
+        "estimated_duration_minutes": 25,
+        "difficulty_baseline": difficulty,
+        "interview_topic": topic,
+        "topic_label": config["label"],
         "categories": categories
     }

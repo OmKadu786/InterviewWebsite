@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form, WebSocket
+from typing import List, Dict
 from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
@@ -11,7 +12,7 @@ from services.llm_service import get_ai_response, get_hint, evaluate_answer
 from services.tts_service import generate_audio
 from services.video_service import process_video_frame, Stabilizer
 from services.resume_analyzer import analyze_resume, build_compact_summary
-from services.interview_planner import generate_interview_plan
+from services.interview_planner import generate_interview_plan, generate_topic_plan
 from services.interview_state import InterviewState
 from services.logic_validator import validate_logic
 from services.speech_analyzer import analyze_speech_confidence
@@ -78,6 +79,8 @@ camera_active = False
 session_data = {
     "resume_text": "",           # Raw text (kept for hints)
     "job_description": "",
+    "difficulty": "medium",       # User-selected difficulty (easy/medium/hard)
+    "interview_topic": "",       # Topic-only mode: AI_ML, DSA, WEB_DEV (empty = resume mode)
     "candidate_profile": None,   # Structured profile from resume_analyzer
     "candidate_summary": "",     # Compact summary for LLM prompts
     "interview_plan": None,      # Fixed plan from interview_planner
@@ -90,6 +93,10 @@ session_data = {
 class HintRequest(BaseModel):
     question: str
     level: str = "medium"  # small, medium, or full
+
+class TopicInterviewRequest(BaseModel):
+    topic: str  # AI_ML, DSA, or WEB_DEV
+    difficulty: str = "medium"  # easy, medium, or hard
 
 # Health check endpoints
 @app.get("/")
@@ -155,11 +162,13 @@ async def get_interview_hint(request: HintRequest):
     }
 
 @app.post("/upload-resume")
-async def upload_resume(file: UploadFile = File(...), job_description: str = Form(...)):
+async def upload_resume(file: UploadFile = File(...), job_description: str = Form(...), difficulty: str = Form("medium")):
     pdf_bytes = await file.read()
     text = extract_text_from_pdf(pdf_bytes)
     session_data["resume_text"] = text
     session_data["job_description"] = job_description
+    session_data["difficulty"] = difficulty if difficulty in ("easy", "medium", "hard") else "medium"
+    session_data["interview_topic"] = ""  # Clear topic mode when using resume
     session_data["transcript"] = []
     session_data["video_metrics"] = []
     session_data["answer_scores"] = []
@@ -169,8 +178,8 @@ async def upload_resume(file: UploadFile = File(...), job_description: str = For
     session_data["candidate_profile"] = profile
     session_data["candidate_summary"] = build_compact_summary(profile)
     
-    # Generate interview plan
-    plan = await generate_interview_plan(profile, job_description)
+    # Generate interview plan with user-selected difficulty
+    plan = await generate_interview_plan(profile, job_description, session_data["difficulty"])
     session_data["interview_plan"] = plan
     session_data["interview_state"] = None  # Will be created at WebSocket connect
     
@@ -184,6 +193,47 @@ async def upload_resume(file: UploadFile = File(...), job_description: str = For
             "total_questions": plan.get("total_questions", 10),
             "categories": [c["name"] for c in plan.get("categories", [])],
             "difficulty": plan.get("difficulty_baseline", "medium")
+        }
+    }
+
+@app.post("/start-topic-interview")
+async def start_topic_interview(request: TopicInterviewRequest):
+    """Start a topic-based interview (no resume needed)."""
+    valid_topics = ["AI_ML", "DSA", "WEB_DEV"]
+    if request.topic not in valid_topics:
+        raise HTTPException(status_code=400, detail=f"Invalid topic. Must be one of: {valid_topics}")
+    
+    difficulty = request.difficulty if request.difficulty in ("easy", "medium", "hard") else "medium"
+    
+    # Reset session for topic mode
+    session_data["resume_text"] = ""
+    session_data["job_description"] = ""
+    session_data["difficulty"] = difficulty
+    session_data["interview_topic"] = request.topic
+    session_data["candidate_profile"] = None
+    session_data["candidate_summary"] = ""
+    session_data["transcript"] = []
+    session_data["video_metrics"] = []
+    session_data["answer_scores"] = []
+    
+    # Generate topic-specific plan (no LLM call needed)
+    plan = generate_topic_plan(request.topic, difficulty)
+    session_data["interview_plan"] = plan
+    session_data["interview_state"] = None  # Will be created at WebSocket connect
+    
+    topic_labels = {"AI_ML": "AI / Machine Learning", "DSA": "Data Structures & Algorithms", "WEB_DEV": "Web Development"}
+    
+    print(f"[Topic Interview] Topic: {request.topic}, Difficulty: {difficulty}")
+    print(f"[Interview Planner] Plan: {json.dumps(plan, indent=2)[:500]}")
+    
+    return {
+        "message": f"{topic_labels[request.topic]} interview ready!",
+        "interview_plan": {
+            "total_questions": plan.get("total_questions", 9),
+            "categories": [c["name"] for c in plan.get("categories", [])],
+            "difficulty": difficulty,
+            "topic": request.topic,
+            "topic_label": topic_labels[request.topic]
         }
     }
 
@@ -232,14 +282,17 @@ async def interview_websocket(websocket: WebSocket):
         state = None
     
     # 1. Opening — use the structured plan for the first question
-    if session_data["candidate_summary"]:
+    # Works in both resume mode (candidate_summary set) and topic mode (interview_topic set)
+    if session_data["candidate_summary"] or session_data.get("interview_topic"):
         interview_context = state.to_context_string() if state else ""
         
         response_text = await get_ai_response(
             session_data["candidate_summary"],
             session_data["job_description"],
             chat_history,
-            interview_context
+            interview_context,
+            session_data["difficulty"],
+            session_data.get("interview_topic", "")
         )
         
         # Track the question for evaluation later
@@ -299,7 +352,9 @@ async def interview_websocket(websocket: WebSocket):
                         session_data["candidate_summary"],
                         session_data["job_description"],
                         chat_history,
-                        interview_context
+                        interview_context,
+                        session_data["difficulty"],
+                        session_data.get("interview_topic", "")
                     ))
                     
                     if state and state.current_question_text and not state.is_complete:
