@@ -1,8 +1,9 @@
 /**
- * CandidateReport - Main Analytics Dashboard for HireByte
- * Displays comprehensive interview performance analytics with charts and AI feedback.
+ * CandidateReport — RIPIS Antigravity Modern Dashboard
+ * Glassmorphism 2.0 dark-mode dashboard with Bento Grid layout,
+ * neon Cyan/Violet accents, noise-grain texture, and interactive charts.
  */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { API_ENDPOINTS } from '../../config/api';
 import {
   RadarChart,
@@ -10,6 +11,8 @@ import {
   PolarAngleAxis,
   PolarRadiusAxis,
   Radar,
+  AreaChart,
+  Area,
   LineChart,
   Line,
   XAxis,
@@ -22,17 +25,25 @@ import {
   ResponsiveContainer,
   Cell
 } from 'recharts';
-import { 
-  Download, 
-  TrendingUp, 
-  Eye, 
-  MessageCircle, 
+import {
+  Download,
+  TrendingUp,
+  Eye,
+  MessageCircle,
   Brain,
   Sparkles,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  Award,
+  Zap,
+  Target,
+  Activity
 } from 'lucide-react';
+import { Badge } from '../Badge';
+import { BADGES, BADGE_CATEGORY_LABELS, BadgeCategory } from '../../data/badges';
+import { evaluateEarnedBadges, WeaknessInput, AnalyticsInput } from '../../data/badgeEvaluator';
 
+/* ─── Types ───────────────────────────────────────────── */
 interface AnalyticsData {
   radar_chart_data: {
     technical_accuracy: number;
@@ -40,6 +51,8 @@ interface AnalyticsData {
     confidence: number;
     focus: number;
     emotional_intelligence: number;
+    reasoning?: number;
+    autonomy?: number;
   };
   vision_analytics: {
     overall_eye_contact_percentage: number;
@@ -61,6 +74,8 @@ interface AnalyticsData {
     average_score: number;
     scores_over_time: number[];
   };
+  topic_mastery?: Record<string, number>;
+  clarity_timeline?: Array<{ question: string; clarity: number; status: string }>;
 }
 
 interface FeedbackData {
@@ -68,371 +83,403 @@ interface FeedbackData {
   improvements: string[];
 }
 
+/* ─── Noise SVG for grain texture ────────────────────── */
+const NOISE_SVG = `url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='512' height='512' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E")`;
+
+/* ─── Reusable Card with noise grain ─────────────────── */
+const RCard = ({ children, className = '', span = '' }: { children: React.ReactNode; className?: string; span?: string }) => (
+  <div className={`relative overflow-hidden rounded-[24px] bg-[#020617]/60 backdrop-blur-xl border-[0.5px] border-cyan-500/12 transition-all duration-300 hover:border-cyan-500/25 hover:shadow-[0_0_30px_rgba(0,229,255,0.06)] ${span} ${className}`}>
+    {/* noise grain */}
+    <div className="pointer-events-none absolute inset-0 z-[1] rounded-[inherit] opacity-[0.03]"
+      style={{ backgroundImage: NOISE_SVG, backgroundRepeat: 'repeat', backgroundSize: '256px 256px' }} />
+    <div className="relative z-[2] p-5">
+      {children}
+    </div>
+  </div>
+);
+
+/* ─── Section Label ──────────────────────────────────── */
+const SectionLabel = ({ children }: { children: React.ReactNode }) => (
+  <p className="uppercase tracking-[0.08em] font-medium text-cyan-400/70" style={{ fontSize: 'clamp(0.65rem, 1vw, 0.8rem)' }}>
+    {children}
+  </p>
+);
+
+/* ─── Circular Progress Ring (SVG) ───────────────────── */
+const ReadinessRing = ({ score }: { score: number }) => {
+  const size = 180;
+  const stroke = 10;
+  const r = (size - stroke) / 2;
+  const C = 2 * Math.PI * r;
+  const offset = C - (score / 100) * C;
+
+  return (
+    <div className="flex flex-col items-center gap-3">
+      <svg width={size} height={size} className="drop-shadow-[0_0_20px_rgba(0,229,255,0.3)]">
+        <defs>
+          <linearGradient id="cyan-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#00E5FF" />
+            <stop offset="100%" stopColor="#8B5CF6" />
+          </linearGradient>
+        </defs>
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth={stroke} />
+        <circle
+          cx={size / 2} cy={size / 2} r={r}
+          fill="none" stroke="url(#cyan-gradient)" strokeWidth={stroke}
+          strokeLinecap="round"
+          strokeDasharray={C}
+          strokeDashoffset={offset}
+          transform={`rotate(-90 ${size / 2} ${size / 2})`}
+          className="transition-all duration-1000 ease-out"
+        />
+        <text x="50%" y="46%" textAnchor="middle" fill="#00E5FF" fontSize="clamp(2rem, 4vw, 3.5rem)" fontWeight="800">{score}</text>
+        <text x="50%" y="62%" textAnchor="middle" fill="rgba(255,255,255,0.4)" fontSize="12" fontWeight="500">/ 100</text>
+      </svg>
+      <p className="uppercase tracking-[0.08em] text-xs font-medium text-cyan-400/60">Interview Readiness Index</p>
+    </div>
+  );
+};
+
+/* ─── Main Component ─────────────────────────────────── */
 export function CandidateReport() {
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [feedback, setFeedback] = useState<FeedbackData | null>(null);
+  const [weakness, setWeakness] = useState<WeaknessInput | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingFeedback, setLoadingFeedback] = useState(false);
 
-  useEffect(() => {
-    fetchAnalytics();
-  }, []);
+  useEffect(() => { fetchAnalytics(); fetchWeakness(); }, []);
 
   const fetchAnalytics = async () => {
     try {
-      const response = await fetch(API_ENDPOINTS.analytics);
-      const data = await response.json();
-      setAnalytics(data);
-    } catch (error) {
-      console.error('Error fetching analytics:', error);
-    } finally {
-      setLoading(false);
-    }
+      const res = await fetch(API_ENDPOINTS.analytics);
+      setAnalytics(await res.json());
+    } catch (e) { console.error('Analytics fetch error:', e); }
+    finally { setLoading(false); }
   };
+
+  const fetchWeakness = async () => {
+    try {
+      const res = await fetch(`${API_ENDPOINTS.uploadResume.replace('/upload-resume', '')}/api/session/weakness-analysis`);
+      if (res.ok) setWeakness(await res.json());
+    } catch (e) { console.error('Weakness fetch skipped:', e); }
+  };
+
+  const earnedBadges = useMemo(() => evaluateEarnedBadges(analytics as unknown as AnalyticsInput, weakness), [analytics, weakness]);
+  const badgesByCategory = useMemo(() => {
+    const groups: Partial<Record<BadgeCategory, string[]>> = {};
+    for (const id of earnedBadges) {
+      const badge = BADGES[id];
+      if (!badge) continue;
+      if (!groups[badge.category]) groups[badge.category] = [];
+      groups[badge.category]!.push(id);
+    }
+    return groups;
+  }, [earnedBadges]);
 
   const fetchFeedback = async () => {
     setLoadingFeedback(true);
     try {
-      const response = await fetch(API_ENDPOINTS.analyticsFeedback, {
-        method: 'POST'
-      });
-      const data = await response.json();
-      setFeedback(data);
-    } catch (error) {
-      console.error('Error fetching feedback:', error);
-    } finally {
-      setLoadingFeedback(false);
-    }
+      const res = await fetch(API_ENDPOINTS.analyticsFeedback, { method: 'POST' });
+      setFeedback(await res.json());
+    } catch (e) { console.error('Feedback error:', e); }
+    finally { setLoadingFeedback(false); }
   };
 
   const exportToPDF = async () => {
-    // Dynamic import for html2pdf
     const html2pdf = (await import('html2pdf.js')).default;
-    const element = document.getElementById('report-content');
-    if (element) {
-      html2pdf()
-        .set({
-          margin: 10,
-          filename: 'hirebyte-interview-report.pdf',
-          image: { type: 'jpeg', quality: 0.98 },
-          html2canvas: { scale: 2 },
-          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-        })
-        .from(element)
-        .save();
-    }
+    const el = document.getElementById('report-content');
+    if (el) html2pdf().set({ margin: 10, filename: 'hirebyte-ripis-report.pdf', image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2, backgroundColor: '#020617' }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } }).from(el).save();
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="animate-spin w-8 h-8 border-4 border-hirebyte-mint border-t-transparent rounded-full" />
-      </div>
-    );
-  }
-
-  if (!analytics) {
-    return (
-      <div className="text-center py-12">
-        <p className="text-gray-500 dark:text-gray-400">No analytics data available yet.</p>
-        <p className="text-sm text-gray-400 dark:text-gray-500 mt-2">Complete an interview to see your report.</p>
-      </div>
-    );
-  }
-
-  // Transform data for radar chart
-  const radarData = [
-    { metric: 'Technical', value: analytics.radar_chart_data.technical_accuracy, fullMark: 100 },
-    { metric: 'Communication', value: analytics.radar_chart_data.communication, fullMark: 100 },
-    { metric: 'Confidence', value: analytics.radar_chart_data.confidence, fullMark: 100 },
-    { metric: 'Focus', value: analytics.radar_chart_data.focus, fullMark: 100 },
-    { metric: 'EQ', value: analytics.radar_chart_data.emotional_intelligence, fullMark: 100 }
-  ];
-
-  // Transform data for line charts
-  const confidenceData = analytics.vision_analytics.per_question_metrics?.map((q, i) => ({
-    question: `Q${i + 1}`,
-    confidence: q.confidence || 0,
-    eyeContact: q.eye_contact_percentage || 0
-  })) || [];
-
-  // Sentiment heatmap data
-  const sentimentData = analytics.nlp_report.sentiment_trend?.map((s, i) => ({
-    question: `Q${i + 1}`,
-    sentiment: ((s + 1) / 2) * 100 // Map -1,1 to 0,100
-  })) || [];
-
-  // Benchmark comparison
-  const benchmarkData = [
-    { name: 'Your Score', score: analytics.scoring_summary.average_score || 0 },
-    { name: 'Average', score: 65 }
-  ];
-
-  // Enhanced weighted scoring for more accurate predictions
-  // Weights: Communication (25%), Confidence (25%), Technical (20%), Focus (15%), EQ (15%)
-  const weights = {
-    communication: 0.25,
-    confidence: 0.25,
-    technical: 0.20,
-    focus: 0.15,
-    emotional_intelligence: 0.15
-  };
-  
-  const overallScore = Math.round(
-    analytics.radar_chart_data.communication * weights.communication +
-    analytics.radar_chart_data.confidence * weights.confidence +
-    analytics.radar_chart_data.technical_accuracy * weights.technical +
-    analytics.radar_chart_data.focus * weights.focus +
-    analytics.radar_chart_data.emotional_intelligence * weights.emotional_intelligence
+  /* ─── Loading / Empty ──── */
+  if (loading) return (
+    <div className="flex items-center justify-center h-96 bg-[#020617]">
+      <div className="animate-spin w-8 h-8 border-4 border-cyan-400 border-t-transparent rounded-full" />
+    </div>
   );
-  
-  // Apply sample size penalty for short interviews (less reliable scores)
-  const sampleCount = analytics.vision_analytics.per_question_metrics?.length || 0;
-  const adjustedScore = sampleCount < 3 
-    ? Math.round(overallScore * 0.9) // 10% penalty for very short interviews
-    : overallScore;
+  if (!analytics) return (
+    <div className="text-center py-12 bg-[#020617] min-h-screen">
+      <p className="text-gray-500">No analytics data available yet.</p>
+      <p className="text-sm text-gray-600 mt-2">Complete an interview to see your RIPIS report.</p>
+    </div>
+  );
 
+  /* ─── Data transforms ──── */
+  const rd = analytics.radar_chart_data;
+  const technical = rd.technical_accuracy || 0;
+  const reasoning = rd.reasoning ?? ((technical + (rd.confidence || 0)) / 2);
+  const autonomy = rd.autonomy ?? 80;
+  const softSkills = ((rd.communication || 0) + (rd.emotional_intelligence || 0)) / 2;
+
+  // RIPIS weighted score
+  const readinessScore = Math.round(
+    technical * 0.40 + reasoning * 0.30 + autonomy * 0.20 + softSkills * 0.10
+  );
+
+  // Topic mastery radar data
+  const topicData = Object.entries(analytics.topic_mastery || {
+    DSA: technical * 0.9, OS: technical * 0.85, DBMS: technical * 0.8,
+    Networking: rd.communication * 0.7, 'Soft Skills': softSkills * 0.9
+  }).map(([key, val]) => ({ topic: key, value: Math.round(val as number), fullMark: 100 }));
+
+  // Reasoning density: logic-per-minute approximation
+  const reasoningDensity = analytics.vision_analytics.per_question_metrics?.map((q, i) => ({
+    question: `Q${i + 1}`,
+    logicPerMin: Math.round(((q.confidence || 50) + (q.eye_contact_percentage || 50)) / 2 * 1.2)
+  })) || [];
+
+  // Clarity flow timeline
+  const clarityData = analytics.clarity_timeline?.length
+    ? analytics.clarity_timeline
+    : analytics.vision_analytics.per_question_metrics?.map((q, i) => ({
+      question: `Q${i + 1}`,
+      clarity: Math.round(((q.confidence || 50) + (q.eye_contact_percentage || 50)) / 2),
+      status: ((q.confidence || 50) + (q.eye_contact_percentage || 50)) / 2 >= 60 ? 'flowing' : 'stuck'
+    })) || [];
+
+  // Confidence over time
+  const confidenceData = analytics.vision_analytics.per_question_metrics?.map((q, i) => ({
+    question: `Q${i + 1}`, confidence: q.confidence || 0, eyeContact: q.eye_contact_percentage || 0
+  })) || [];
+
+  // Weight breakdown
+  const weightBreakdown = [
+    { label: 'Technical', value: Math.round(technical), weight: '40%', color: '#00E5FF' },
+    { label: 'Reasoning', value: Math.round(reasoning), weight: '30%', color: '#8B5CF6' },
+    { label: 'Autonomy', value: Math.round(autonomy), weight: '20%', color: '#2DD4BF' },
+    { label: 'Soft Skills', value: Math.round(softSkills), weight: '10%', color: '#F472B6' },
+  ];
+
+  /* ─── Tooltip style ──── */
+  const tooltipStyle = { backgroundColor: '#0A0F1E', border: '1px solid rgba(0,229,255,0.15)', borderRadius: '12px' };
+
+  /* ─── Render ──── */
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
-      <div id="report-content" className="max-w-6xl mx-auto space-y-6">
-        
-        {/* Header */}
-        <div className="flex justify-between items-center">
+    <div className="min-h-screen bg-[#020617] text-white p-4 md:p-6 lg:p-8">
+      <div id="report-content" className="max-w-[1400px] mx-auto space-y-5">
+
+        {/* ════ Header ════ */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-              Interview Report
+            <h1 style={{ fontSize: 'clamp(1.25rem, 2vw, 1.75rem)' }} className="font-bold tracking-tight text-white">
+              RIPIS Dashboard
             </h1>
-            <p className="text-gray-500 dark:text-gray-400 mt-1">
-              Powered by HireByte
-            </p>
+            <p className="text-cyan-400/50 text-sm mt-0.5">Powered by HireByte — Antigravity Modern</p>
           </div>
-          <button
-            onClick={exportToPDF}
-            className="flex items-center gap-2 px-4 py-2 bg-hirebyte-blue text-white rounded-lg hover:bg-opacity-90 transition"
-          >
-            <Download size={18} />
-            Export PDF
+          <button onClick={exportToPDF} className="flex items-center gap-2 px-4 py-2 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-sm font-medium hover:bg-cyan-500/20 transition-colors">
+            <Download size={16} /> Export PDF
           </button>
         </div>
 
-        {/* Overall Score Card */}
-        <div className="bg-gradient-to-br from-hirebyte-blue to-blue-700 rounded-2xl p-6 text-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-blue-200 text-sm uppercase tracking-wide">Overall Performance</p>
-              <p className="text-5xl font-bold mt-2">{overallScore}</p>
-              <p className="text-blue-200 mt-1">out of 100</p>
+        {/* ════ Row 1: Readiness Ring + Weight Breakdown ════ */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+
+          {/* Readiness Ring */}
+          <RCard span="md:col-span-1 lg:col-span-1">
+            <SectionLabel>Interview Readiness</SectionLabel>
+            <div className="flex items-center justify-center mt-4">
+              <ReadinessRing score={readinessScore} />
             </div>
-            <div className="w-24 h-24 rounded-full border-4 border-hirebyte-mint flex items-center justify-center">
-              <Sparkles className="w-10 h-10 text-hirebyte-mint" />
+          </RCard>
+
+          {/* Weight Breakdown */}
+          <RCard span="md:col-span-1 lg:col-span-1">
+            <SectionLabel>Score Breakdown</SectionLabel>
+            <div className="mt-4 space-y-3">
+              {weightBreakdown.map(w => (
+                <div key={w.label} className="flex items-center gap-3">
+                  <span className="text-xs text-white/60 w-20">{w.label}</span>
+                  <div className="flex-1 h-2 bg-white/5 rounded-full overflow-hidden">
+                    <div className="h-full rounded-full transition-all duration-700" style={{ width: `${w.value}%`, backgroundColor: w.color }} />
+                  </div>
+                  <span className="text-xs font-mono text-white/80 w-8 text-right">{w.value}</span>
+                  <span className="text-[10px] text-white/30 w-8">{w.weight}</span>
+                </div>
+              ))}
             </div>
-          </div>
+            <p className="text-[10px] text-white/20 mt-3 italic">Formula: 40% Tech + 30% Reasoning + 20% Autonomy + 10% Soft Skills</p>
+          </RCard>
+
+          {/* Quick Stats */}
+          <RCard span="md:col-span-2 lg:col-span-1">
+            <SectionLabel>Quick Stats</SectionLabel>
+            <div className="grid grid-cols-2 gap-3 mt-4">
+              {[
+                { icon: <Eye size={14} />, label: 'Eye Contact', val: `${analytics.vision_analytics.overall_eye_contact_percentage?.toFixed(0) || 0}%`, color: 'text-cyan-400' },
+                { icon: <MessageCircle size={14} />, label: 'Filler Words', val: analytics.nlp_report.total_filler_count || 0, color: 'text-violet-400' },
+                { icon: <Zap size={14} />, label: 'Filler Rate', val: `${analytics.nlp_report.filler_rate?.toFixed(1) || 0}%`, color: 'text-amber-400' },
+                { icon: <Activity size={14} />, label: 'Steadiness', val: `${analytics.vision_analytics.overall_steadiness_percentage?.toFixed(0) || 0}%`, color: 'text-emerald-400' },
+              ].map(s => (
+                <div key={s.label} className="bg-white/[0.03] rounded-xl p-3 border border-white/5">
+                  <div className={`flex items-center gap-1.5 text-[10px] uppercase tracking-wider ${s.color} mb-1`}>{s.icon}{s.label}</div>
+                  <p className="text-xl font-bold text-white">{s.val}</p>
+                </div>
+              ))}
+            </div>
+          </RCard>
         </div>
 
-        {/* Charts Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          
-          {/* Radar Chart */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-              <Brain size={20} className="text-hirebyte-mint" />
-              Competency Profile
-            </h2>
+        {/* ════ Row 2: Topic Mastery Radar + Reasoning Density ════ */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+          {/* Topic Mastery Radar */}
+          <RCard>
+            <div className="flex items-center gap-2 mb-3">
+              <Target size={16} className="text-cyan-400" />
+              <SectionLabel>Topic Mastery Radar</SectionLabel>
+            </div>
             <ResponsiveContainer width="100%" height={280}>
-              <RadarChart data={radarData}>
-                <PolarGrid stroke="#374151" />
-                <PolarAngleAxis dataKey="metric" tick={{ fill: '#9CA3AF', fontSize: 12 }} />
-                <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fill: '#9CA3AF' }} />
-                <Radar
-                  name="Score"
-                  dataKey="value"
-                  stroke="#2ECC71"
-                  fill="#2ECC71"
-                  fillOpacity={0.3}
-                />
+              <RadarChart data={topicData}>
+                <PolarGrid stroke="rgba(255,255,255,0.06)" />
+                <PolarAngleAxis dataKey="topic" tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 11 }} />
+                <PolarRadiusAxis angle={30} domain={[0, 100]} tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 10 }} />
+                <Radar name="Mastery" dataKey="value" stroke="#00E5FF" fill="#00E5FF" fillOpacity={0.15} strokeWidth={2} />
               </RadarChart>
             </ResponsiveContainer>
-          </div>
+          </RCard>
 
-          {/* Confidence Over Time */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-              <TrendingUp size={20} className="text-hirebyte-mint" />
-              Confidence & Focus Timeline
-            </h2>
+          {/* Reasoning Density */}
+          <RCard>
+            <div className="flex items-center gap-2 mb-3">
+              <Brain size={16} className="text-violet-400" />
+              <SectionLabel>Reasoning Density — Logic per Minute</SectionLabel>
+            </div>
             <ResponsiveContainer width="100%" height={280}>
-              <LineChart data={confidenceData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                <XAxis dataKey="question" stroke="#9CA3AF" />
-                <YAxis domain={[0, 100]} stroke="#9CA3AF" />
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#1F2937', border: 'none', borderRadius: '8px' }}
-                  labelStyle={{ color: '#fff' }}
-                />
-                <Legend />
-                <Line type="monotone" dataKey="confidence" stroke="#003366" strokeWidth={2} dot={{ fill: '#003366' }} />
-                <Line type="monotone" dataKey="eyeContact" stroke="#2ECC71" strokeWidth={2} dot={{ fill: '#2ECC71' }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-
-          {/* Sentiment Heatmap */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-              <MessageCircle size={20} className="text-hirebyte-mint" />
-              Sentiment Analysis
-            </h2>
-            <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={sentimentData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                <XAxis dataKey="question" stroke="#9CA3AF" />
-                <YAxis domain={[0, 100]} stroke="#9CA3AF" />
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#1F2937', border: 'none', borderRadius: '8px' }}
-                />
-                <Bar dataKey="sentiment" radius={[4, 4, 0, 0]}>
-                  {sentimentData.map((entry, index) => (
-                    <Cell 
-                      key={`cell-${index}`} 
-                      fill={entry.sentiment > 60 ? '#2ECC71' : entry.sentiment > 40 ? '#F59E0B' : '#EF4444'} 
-                    />
+              <BarChart data={reasoningDensity}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+                <XAxis dataKey="question" stroke="rgba(255,255,255,0.3)" fontSize={11} />
+                <YAxis domain={[0, 100]} stroke="rgba(255,255,255,0.3)" fontSize={10} />
+                <Tooltip contentStyle={tooltipStyle} labelStyle={{ color: '#fff' }} />
+                <Bar dataKey="logicPerMin" radius={[6, 6, 0, 0]}>
+                  {reasoningDensity.map((_, i) => (
+                    <Cell key={i} fill={i % 2 === 0 ? '#8B5CF6' : '#6D28D9'} />
                   ))}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
-          </div>
-
-          {/* Benchmark */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-              <Eye size={20} className="text-hirebyte-mint" />
-              Benchmark Comparison
-            </h2>
-            <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={benchmarkData} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                <XAxis type="number" domain={[0, 100]} stroke="#9CA3AF" />
-                <YAxis type="category" dataKey="name" stroke="#9CA3AF" width={80} />
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#1F2937', border: 'none', borderRadius: '8px' }}
-                />
-                <Bar dataKey="score" radius={[0, 4, 4, 0]}>
-                  <Cell fill="#003366" />
-                  <Cell fill="#6B7280" />
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+          </RCard>
         </div>
 
-        {/* NLP Metrics */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            Communication Insights
-          </h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 text-center">
-              <p className="text-3xl font-bold text-hirebyte-blue">
-                {analytics.nlp_report.talk_to_listen_ratio?.toFixed(1) || '1.0'}
-              </p>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Talk-to-Listen Ratio</p>
-            </div>
-            <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 text-center">
-              <p className="text-3xl font-bold text-hirebyte-mint">
-                {analytics.nlp_report.total_filler_count || 0}
-              </p>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Filler Words</p>
-            </div>
-            <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 text-center">
-              <p className="text-3xl font-bold text-hirebyte-blue">
-                {analytics.nlp_report.filler_rate?.toFixed(1) || 0}%
-              </p>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Filler Rate</p>
-            </div>
-            <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 text-center">
-              <p className="text-3xl font-bold text-hirebyte-mint">
-                {analytics.vision_analytics.overall_eye_contact_percentage?.toFixed(0) || 0}%
-              </p>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Eye Contact</p>
-            </div>
+        {/* ════ Row 3: Thinking Flow Timeline ════ */}
+        <RCard>
+          <div className="flex items-center gap-2 mb-3">
+            <TrendingUp size={16} className="text-emerald-400" />
+            <SectionLabel>Thinking Flow — Clarity vs Time</SectionLabel>
           </div>
-          
-          {/* Common Fillers */}
-          {analytics.nlp_report.most_common_fillers?.length > 0 && (
-            <div className="mt-4">
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">Most used filler words:</p>
-              <div className="flex flex-wrap gap-2">
-                {analytics.nlp_report.most_common_fillers.map(([word, count], i) => (
-                  <span
-                    key={i}
-                    className="px-3 py-1 bg-gray-100 dark:bg-gray-600 rounded-full text-sm text-gray-700 dark:text-gray-300"
-                  >
-                    "{word}" × {count}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
+          <ResponsiveContainer width="100%" height={240}>
+            <AreaChart data={clarityData}>
+              <defs>
+                <linearGradient id="clarityGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#00E5FF" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#00E5FF" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+              <XAxis dataKey="question" stroke="rgba(255,255,255,0.3)" fontSize={11} />
+              <YAxis domain={[0, 100]} stroke="rgba(255,255,255,0.3)" fontSize={10} />
+              <Tooltip contentStyle={tooltipStyle} labelStyle={{ color: '#fff' }} />
+              <Area type="monotone" dataKey="clarity" stroke="#00E5FF" fill="url(#clarityGrad)" strokeWidth={2} dot={{ fill: '#00E5FF', strokeWidth: 0, r: 4 }} />
+            </AreaChart>
+          </ResponsiveContainer>
+          {/* Stuck / Flowing labels */}
+          <div className="flex flex-wrap gap-2 mt-2">
+            {clarityData.map((d, i) => (
+              <span key={i} className={`text-[10px] px-2 py-0.5 rounded-full border ${d.status === 'flowing' ? 'border-emerald-500/30 text-emerald-400 bg-emerald-500/10' : 'border-red-500/30 text-red-400 bg-red-500/10'}`}>
+                {d.question}: {d.status}
+              </span>
+            ))}
+          </div>
+        </RCard>
 
-        {/* AI Feedback */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-              <Sparkles size={20} className="text-hirebyte-mint" />
-              AI-Powered Feedback
-            </h2>
+        {/* ════ Row 4: Confidence Timeline ════ */}
+        <RCard>
+          <div className="flex items-center gap-2 mb-3">
+            <Sparkles size={16} className="text-cyan-400" />
+            <SectionLabel>Confidence & Focus Timeline</SectionLabel>
+          </div>
+          <ResponsiveContainer width="100%" height={220}>
+            <LineChart data={confidenceData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+              <XAxis dataKey="question" stroke="rgba(255,255,255,0.3)" fontSize={11} />
+              <YAxis domain={[0, 100]} stroke="rgba(255,255,255,0.3)" fontSize={10} />
+              <Tooltip contentStyle={tooltipStyle} labelStyle={{ color: '#fff' }} />
+              <Legend wrapperStyle={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)' }} />
+              <Line type="monotone" dataKey="confidence" stroke="#00E5FF" strokeWidth={2} dot={{ fill: '#00E5FF', r: 3 }} />
+              <Line type="monotone" dataKey="eyeContact" stroke="#2DD4BF" strokeWidth={2} dot={{ fill: '#2DD4BF', r: 3 }} />
+            </LineChart>
+          </ResponsiveContainer>
+        </RCard>
+
+        {/* ════ Badges ════ */}
+        {earnedBadges.length > 0 && (
+          <RCard>
+            <div className="flex items-center gap-2 mb-4">
+              <Award size={16} className="text-amber-400" />
+              <SectionLabel>Achievements</SectionLabel>
+            </div>
+            <div className="space-y-4">
+              {(Object.entries(badgesByCategory) as [BadgeCategory, string[]][]).map(([cat, ids]) => (
+                <div key={cat}>
+                  <p className="text-[10px] font-medium text-white/40 uppercase tracking-wider mb-2">{BADGE_CATEGORY_LABELS[cat]}</p>
+                  <div className="flex flex-wrap gap-2">{ids.map(id => <Badge key={id} id={id} />)}</div>
+                </div>
+              ))}
+            </div>
+          </RCard>
+        )}
+
+        {/* ════ AI Feedback ════ */}
+        <RCard>
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mb-4">
+            <div className="flex items-center gap-2">
+              <Sparkles size={16} className="text-cyan-400" />
+              <SectionLabel>AI-Powered Feedback</SectionLabel>
+            </div>
             {!feedback && (
-              <button
-                onClick={fetchFeedback}
-                disabled={loadingFeedback}
-                className="px-4 py-2 bg-hirebyte-mint text-white rounded-lg hover:bg-opacity-90 transition disabled:opacity-50"
-              >
+              <button onClick={fetchFeedback} disabled={loadingFeedback}
+                className="px-4 py-2 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-xs font-medium hover:bg-cyan-500/20 transition disabled:opacity-50">
                 {loadingFeedback ? 'Generating...' : 'Generate Feedback'}
               </button>
             )}
           </div>
-          
           {feedback ? (
             <div className="grid md:grid-cols-2 gap-6">
-              {/* Strengths */}
               <div>
-                <h3 className="font-medium text-green-600 dark:text-green-400 mb-3 flex items-center gap-2">
-                  <CheckCircle size={18} />
-                  Strengths
-                </h3>
+                <h3 className="font-medium text-emerald-400 mb-3 flex items-center gap-2 text-sm"><CheckCircle size={14} /> Strengths</h3>
                 <ul className="space-y-2">
                   {feedback.strengths.map((s, i) => (
-                    <li key={i} className="flex items-start gap-2 text-gray-700 dark:text-gray-300">
-                      <span className="text-green-500 mt-1">•</span>
-                      {s}
-                    </li>
+                    <li key={i} className="flex items-start gap-2 text-white/70 text-sm"><span className="text-emerald-500 mt-0.5">•</span>{s}</li>
                   ))}
                 </ul>
               </div>
-              
-              {/* Improvements */}
               <div>
-                <h3 className="font-medium text-amber-600 dark:text-amber-400 mb-3 flex items-center gap-2">
-                  <AlertCircle size={18} />
-                  Areas for Improvement
-                </h3>
+                <h3 className="font-medium text-amber-400 mb-3 flex items-center gap-2 text-sm"><AlertCircle size={14} /> Areas for Improvement</h3>
                 <ul className="space-y-2">
                   {feedback.improvements.map((s, i) => (
-                    <li key={i} className="flex items-start gap-2 text-gray-700 dark:text-gray-300">
-                      <span className="text-amber-500 mt-1">•</span>
-                      {s}
-                    </li>
+                    <li key={i} className="flex items-start gap-2 text-white/70 text-sm"><span className="text-amber-500 mt-0.5">•</span>{s}</li>
                   ))}
                 </ul>
               </div>
             </div>
           ) : (
-            <p className="text-gray-500 dark:text-gray-400 text-center py-4">
-              Click "Generate Feedback" to receive AI-powered personalized insights.
-            </p>
+            <p className="text-white/30 text-center py-4 text-sm">Click "Generate Feedback" for personalized AI insights.</p>
           )}
-        </div>
+        </RCard>
+
+        {/* ════ Filler Words ════ */}
+        {analytics.nlp_report.most_common_fillers?.length > 0 && (
+          <RCard>
+            <SectionLabel>Most Used Filler Words</SectionLabel>
+            <div className="flex flex-wrap gap-2 mt-3">
+              {analytics.nlp_report.most_common_fillers.map(([word, count], i) => (
+                <span key={i} className="px-3 py-1 bg-violet-500/10 border border-violet-500/20 rounded-full text-xs text-violet-300">
+                  "{word}" × {count}
+                </span>
+              ))}
+            </div>
+          </RCard>
+        )}
 
       </div>
     </div>
