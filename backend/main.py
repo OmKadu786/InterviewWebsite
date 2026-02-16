@@ -664,8 +664,8 @@ async def get_hint_status():
 if __name__ == "__main__":
     import uvicorn
     print("Starting HireByte Backend Server...")
-    print("Server: http://localhost:8000")
-    print("API Docs: http://localhost:8000/docs")
+    print("Server: http://localhost:9000")
+    print("API Docs: http://localhost:9000/docs")
     print("Press CTRL+C to stop\n")
     
     # FIXED: Changed "main:app" to app

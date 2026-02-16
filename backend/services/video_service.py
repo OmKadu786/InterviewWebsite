@@ -15,9 +15,9 @@ profile_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_pro
 class Stabilizer:
     def __init__(self):
         # LK Params for Optical Flow
-        self.lk_params = dict(winSize=(15, 15), maxLevel=2,
-                              criteria=(cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03))
-        self.feature_params = dict(maxCorners=50, qualityLevel=0.3, minDistance=7, blockSize=7)
+        self.lk_params = dict(winSize=(21, 21), maxLevel=3,
+                              criteria=(cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 15, 0.01))
+        self.feature_params = dict(maxCorners=80, qualityLevel=0.2, minDistance=5, blockSize=7)
         
         self.prev_gray = None
         self.p0 = None
@@ -41,7 +41,10 @@ class Stabilizer:
         
         # Eye detection history for blink detection
         self.eyes_history = []  # Store last N detections
-        self.eyes_history_size = 5
+        self.eyes_history_size = 8  # Increased buffer for better blink differentiation
+        
+        # CLAHE for histogram equalization in low-light conditions
+        self.clahe = cv2.createCLAHE(clipLimit=2.5, tileGridSize=(8, 8))
 
     def check_stability(self, gray, face_roi):
         """
@@ -176,9 +179,14 @@ def process_video_frame(base64_image, stabilizer: Stabilizer):
 
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         
-        # 1. Detection - tuned parameters for higher accuracy
-        faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=4, minSize=(80, 80))
-        profiles = profile_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=4) if len(faces) == 0 else []
+        # Apply CLAHE for better contrast normalization (helps in low-light)
+        gray = stabilizer.clahe.apply(gray)
+        
+        # 1. Detection - optimized parameters for maximum sensitivity & accuracy
+        # Lower scaleFactor = more detection passes = higher sensitivity
+        # Lower minNeighbors = fewer confirmations needed = catches more faces
+        faces = face_cascade.detectMultiScale(gray, scaleFactor=1.05, minNeighbors=3, minSize=(60, 60))
+        profiles = profile_cascade.detectMultiScale(gray, scaleFactor=1.05, minNeighbors=3, minSize=(50, 50)) if len(faces) == 0 else []
         
         target_focus = 0.0
         target_emo = 0.0
@@ -193,7 +201,9 @@ def process_video_frame(base64_image, stabilizer: Stabilizer):
             roi_gray = gray[y:y+h, x:x+w]
             
             # Eyes detection - stricter parameters
-            eyes = eye_cascade.detectMultiScale(roi_gray, scaleFactor=1.1, minNeighbors=4, minSize=(20, 20))
+            # Apply CLAHE to face ROI for better eye detection
+            roi_gray = stabilizer.clahe.apply(roi_gray)
+            eyes = eye_cascade.detectMultiScale(roi_gray, scaleFactor=1.05, minNeighbors=3, minSize=(15, 15))
             num_eyes = len(eyes)
             stabilizer.update_eyes_history(num_eyes)
             avg_eyes = stabilizer.get_average_eyes()
@@ -210,7 +220,7 @@ def process_video_frame(base64_image, stabilizer: Stabilizer):
                 target_focus = 20.0
             
             # Smile detection
-            smiles = smile_cascade.detectMultiScale(roi_gray, scaleFactor=1.5, minNeighbors=18)
+            smiles = smile_cascade.detectMultiScale(roi_gray, scaleFactor=1.3, minNeighbors=12, minSize=(25, 25))
             if len(smiles) > 0: 
                 target_emo = 85.0
             else: 
@@ -231,8 +241,8 @@ def process_video_frame(base64_image, stabilizer: Stabilizer):
         stabilizer.check_stability(gray, face_roi)
         
         # 3. Smooth with faster response for drops
-        stabilizer.internal_focus = stabilizer.smooth(stabilizer.internal_focus, target_focus, alpha=0.2)
-        stabilizer.internal_emotion = stabilizer.smooth(stabilizer.internal_emotion, target_emo, alpha=0.15)
+        stabilizer.internal_focus = stabilizer.smooth(stabilizer.internal_focus, target_focus, alpha=0.25)
+        stabilizer.internal_emotion = stabilizer.smooth(stabilizer.internal_emotion, target_emo, alpha=0.2)
         
         # Update Displayed State (Hysteresis applied)
         stabilizer.focus_score = stabilizer.get_ui_value(stabilizer.internal_focus, stabilizer.focus_score)

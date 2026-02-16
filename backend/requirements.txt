@@ -1,7 +1,8 @@
 fastapi
 uvicorn[standard]
 openai
-
+motor
+pymongo
 PyPDF2
 python-dotenv
 python-multipart

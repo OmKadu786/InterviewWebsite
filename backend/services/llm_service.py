@@ -113,68 +113,68 @@ No explanation, no markdown, just the JSON object."""
 
 async def get_hint(question, resume_text, job_desc, level="medium", topic="General"):
     """
-    Generate topic-aware, progressive hints based on resume and job description.
+    Generate accurate, resume-grounded hints using gpt-4o-mini.
+    Strictly references only the candidate's actual resume content.
     Supports three levels: small (direction), medium (approach), full (partial outline)
     """
     
     level_instructions = {
-        "small": """
-            Give ONE short directional hint only.
-            - Maximum 1 sentence
-            - Do NOT name specific algorithms or methods
-            - Do NOT provide any code
-            - Just point them in the right direction
-        """,
-        "medium": """
-            Explain the approach at a high level.
-            - 2-3 bullet points maximum
-            - Mention key concepts they should address
-            - Do NOT provide code or specific implementations
-            - Help them structure their thinking
-        """,
-        "full": """
-            Provide a PARTIAL solution outline only.
-            - Show the key steps or structure of the solution
-            - Include 2-3 critical points to mention
-            - Do NOT give the complete answer
-            - Leave gaps for the candidate to fill in themselves
-            - Can reference their resume/projects for context
-        """
+        "small": """OUTPUT FORMAT:
+- Give exactly ONE sentence as a directional hint.
+- Start with: "Based on your experience with [specific resume item]..."
+- Do NOT name specific algorithms, methods, or code.
+- Just point them toward the right area of their own experience.""",
+        "medium": """OUTPUT FORMAT:
+- Give 2-3 bullet points maximum.
+- Each bullet MUST reference a specific skill, project, or technology from the resume.
+- Mention key concepts they should address, connecting to their actual experience.
+- Do NOT provide code or specific implementations.
+- Help them structure their answer using what they already know.""",
+        "full": """OUTPUT FORMAT:
+- Provide a structured outline with 3-4 key points.
+- Each point MUST connect to a specific project, skill, or experience from the resume.
+- Show HOW their past work relates to the answer needed.
+- Include 2-3 critical talking points they should mention.
+- Do NOT give the complete answer — leave gaps for the candidate to fill.
+- Frame it as: "From your [project/skill], you can explain..."
+"""
     }
     
     hint_level = level_instructions.get(level, level_instructions["medium"])
     
-    system_prompt = f"""
-    You are a helpful mentor assisting a candidate during an interview practice session.
-    
-    JOB DESCRIPTION: {job_desc}
-    
-    CANDIDATE'S RESUME: {resume_text}
-    
-    QUESTION TOPIC: {topic}
-    The interviewer just asked: "{question}"
-    
-    HINT LEVEL: {level.upper()}
-    {hint_level}
-    
-    IMPORTANT GUIDELINES:
-    - Tailor your hint specifically to the {topic} domain
-    - Base your hints on the candidate's ACTUAL resume and experience
-    - Reference specific projects, skills, or experiences from their resume when relevant
-    - Be encouraging and professional
-    - Help them connect their experience to the job requirements
-    - For DSA questions: focus on algorithmic thinking and data structure choice
-    - For OS questions: focus on process/memory/scheduling concepts
-    - For DBMS questions: focus on schema design, normalization, query optimization
-    """
+    system_prompt = f"""You are a precise interview coach. Your ONLY job is to help this candidate answer the current interview question by connecting it to their ACTUAL resume content.
+
+=== CANDIDATE'S RESUME (THIS IS YOUR ONLY SOURCE OF TRUTH) ===
+{resume_text}
+
+=== JOB DESCRIPTION ===
+{job_desc}
+
+=== CURRENT QUESTION ===
+Topic: {topic}
+Question: "{question}"
+
+=== HINT LEVEL: {level.upper()} ===
+{hint_level}
+
+=== STRICT RULES (MUST FOLLOW) ===
+1. ONLY reference technologies, projects, skills, and experiences that are EXPLICITLY mentioned in the resume above.
+2. NEVER mention any technology, framework, or concept that does NOT appear in the resume.
+3. NEVER hallucinate or invent projects, skills, or experiences the candidate doesn't have.
+4. If the resume doesn't contain relevant information for this question, say: "This topic isn't directly covered in your resume. Focus on your general problem-solving approach and any transferable skills."
+5. Be specific — instead of "your project", say the actual project name from the resume.
+6. Be concise and actionable — the candidate needs to answer quickly.
+7. For technical questions (DSA/OS/DBMS): connect the concept to a real project or skill from their resume.
+8. Never repeat the question back. Jump straight into the hint."""
     
     messages = [{"role": "system", "content": system_prompt}]
     
     try:
         response = await client.chat.completions.create(
-            model="gpt-3.5-turbo",
+            model="gpt-4o-mini",
             messages=messages,
-            max_tokens=200 if level == "small" else 400 if level == "medium" else 600
+            temperature=0.1,
+            max_tokens=150 if level == "small" else 300 if level == "medium" else 500
         )
         return response.choices[0].message.content
     except Exception as e:

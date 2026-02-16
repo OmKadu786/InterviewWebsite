@@ -7,7 +7,9 @@ interface AuthContextType {
     user: User | null;
     session: Session | null;
     isLoading: boolean;
-    signInWithEmail: (email: string, fullName?: string) => Promise<{ error: any }>;
+    signInWithEmail: (email: string, password?: string, fullName?: string) => Promise<{ error: any }>;
+    signUpWithEmail: (email: string, password: string, fullName: string) => Promise<{ error: any }>;
+    signInWithGoogle: () => Promise<{ error: any }>;
     signOut: () => Promise<void>;
 }
 
@@ -36,15 +38,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return () => subscription.unsubscribe();
     }, []);
 
-    const signInWithEmail = async (email: string, fullName?: string) => {
-        // Using magic link for passwordless login
-        // We can also use options to redirect the user back to the site
-        const { error } = await supabase.auth.signInWithOtp({
+    const signInWithEmail = async (email: string, password?: string, fullName?: string) => {
+        if (password) {
+            // Sign in with password
+            const { error } = await supabase.auth.signInWithPassword({
+                email,
+                password,
+            });
+            return { error };
+        } else {
+            // Magic link (legacy/alternative)
+            const { error } = await supabase.auth.signInWithOtp({
+                email,
+                options: {
+                    emailRedirectTo: window.location.origin,
+                    data: fullName ? { full_name: fullName } : undefined,
+                },
+            });
+            return { error };
+        }
+    };
+
+    const signUpWithEmail = async (email: string, password: string, fullName: string) => {
+        const { error } = await supabase.auth.signUp({
             email,
+            password,
             options: {
-                emailRedirectTo: window.location.origin,
-                // Save full name to user metadata (accessible via user.user_metadata.full_name)
-                data: fullName ? { full_name: fullName } : undefined,
+                data: {
+                    full_name: fullName,
+                },
+            },
+        });
+        return { error };
+    };
+
+    const signInWithGoogle = async () => {
+        const { error } = await supabase.auth.signInWithOAuth({
+            provider: 'google',
+            options: {
+                redirectTo: window.location.origin,
             },
         });
         return { error };
@@ -55,7 +87,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     return (
-        <AuthContext.Provider value={{ user, session, isLoading, signInWithEmail, signOut }}>
+        <AuthContext.Provider value={{ user, session, isLoading, signInWithEmail, signUpWithEmail, signInWithGoogle, signOut }}>
             {children}
         </AuthContext.Provider>
     );
