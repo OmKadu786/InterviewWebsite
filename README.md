@@ -60,5 +60,6 @@ Open `http://localhost:5173` to start your interview session!
 | **Pranav Thorat** | **Frontend Lead** | Architected the user interface and core website functionality, ensuring a seamless and responsive user experience. |
 | **Om Kadu** | **Backend Lead** | The "Brain" of the project. Developed the entire LLM integration, API infrastructure, and real-time processing logic. |
 | **Aaryan Nerkar** | **AI Engineer** | Implemented the Face Tracking AI and emotion analysis engine, enabling the system to read and respond to user non-verbal cues. |
+| **Aryan Dalvi** | **Database Manager** | Designed and managed the entire database architecture, ensuring secure, efficient, and scalable data storage. |
 
 ---
