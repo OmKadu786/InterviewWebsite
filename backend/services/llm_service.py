@@ -47,7 +47,8 @@ BEHAVIOR RULES:
         response = await client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=messages,
-            max_tokens=250
+            max_tokens=250,
+            timeout=15.0
         )
         return response.choices[0].message.content
     except Exception as e:
@@ -86,7 +87,8 @@ No explanation, no markdown, just the JSON object."""
             model="gpt-3.5-turbo",
             messages=[{"role": "system", "content": eval_prompt}],
             temperature=0.2,
-            max_tokens=50
+            max_tokens=50,
+            timeout=10.0
         )
         
         raw = response.choices[0].message.content.strip()
@@ -174,7 +176,8 @@ Question: "{question}"
             model="gpt-4o-mini",
             messages=messages,
             temperature=0.1,
-            max_tokens=150 if level == "small" else 300 if level == "medium" else 500
+            max_tokens=150 if level == "small" else 300 if level == "medium" else 500,
+            timeout=15.0
         )
         return response.choices[0].message.content
     except Exception as e:

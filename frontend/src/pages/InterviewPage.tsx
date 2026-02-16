@@ -91,11 +91,19 @@ export const InterviewPage: React.FC = () => {
 
             if (user) {
                 // Save session to DB
-                await fetch(`${API_ENDPOINTS.analytics}/../session/save`, {
+                const res = await fetch(`${API_ENDPOINTS.analytics}/../session/save`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ user_id: user.id })
                 });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.interview_id) {
+                        navigate(`/analytics?id=${data.interview_id}`);
+                        return;
+                    }
+                }
             }
         } catch (error) {
             console.error('Error ending interview:', error);

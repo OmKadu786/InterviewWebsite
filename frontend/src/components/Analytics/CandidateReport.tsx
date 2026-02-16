@@ -141,14 +141,23 @@ const ReadinessRing = ({ score }: { score: number }) => {
 };
 
 /* ─── Main Component ─────────────────────────────────── */
-export function CandidateReport() {
+export function CandidateReport({ analyticsData, interviewId }: { analyticsData?: AnalyticsData | null; interviewId?: string }) {
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null);
   const [feedback, setFeedback] = useState<FeedbackData | null>(null);
   const [weakness, setWeakness] = useState<WeaknessInput | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingFeedback, setLoadingFeedback] = useState(false);
 
-  useEffect(() => { fetchAnalytics(); fetchWeakness(); }, []);
+  useEffect(() => {
+    if (analyticsData) {
+      setAnalytics(analyticsData);
+      setLoading(false);
+      fetchWeakness(); // Still fetch weakness if needed, or pass it too?
+    } else {
+      fetchAnalytics();
+      fetchWeakness();
+    }
+  }, [analyticsData]);
 
   const fetchAnalytics = async () => {
     try {
@@ -187,9 +196,15 @@ export function CandidateReport() {
   };
 
   const exportToPDF = async () => {
-    const html2pdf = (await import('html2pdf.js')).default;
-    const el = document.getElementById('report-content');
-    if (el) html2pdf().set({ margin: 10, filename: 'hirebyte-ripis-report.pdf', image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2, backgroundColor: '#020617' }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } }).from(el).save();
+    if (interviewId) {
+      // Use backend generation if ID is available (History view)
+      window.open(`${API_ENDPOINTS.uploadResume.replace('/upload-resume', '')}/api/interview/${interviewId}/download`, '_blank');
+    } else {
+      // Fallback to client-side generation (Current session view)
+      const html2pdf = (await import('html2pdf.js')).default;
+      const el = document.getElementById('report-content');
+      if (el) html2pdf().set({ margin: 10, filename: 'hirebyte-ripis-report.pdf', image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2, backgroundColor: '#020617' }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } }).from(el).save();
+    }
   };
 
   /* ─── Loading / Empty ──── */

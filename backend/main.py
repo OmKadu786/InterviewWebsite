@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form, WebSocket
+from fastapi.responses import JSONResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from pydantic import BaseModel
@@ -20,6 +21,7 @@ import threading
 import json
 import base64
 import time
+import traceback
 import os
 from openai import AsyncOpenAI
 from dotenv import load_dotenv
@@ -62,7 +64,7 @@ app = FastAPI(
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Update for production
+    allow_origins=["http://localhost:5173", "http://localhost:3000", "http://localhost:9000", "http://127.0.0.1:5173", "http://127.0.0.1:3000", "http://127.0.0.1:9000"],  # Update for production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -191,22 +193,29 @@ async def transcribe_audio(file: UploadFile = File(...)):
     with open(temp_path, "wb") as buffer:
         buffer.write(await file.read())
     
-    with open(temp_path, "rb") as audio_file:
-        transcript = await client.audio.transcriptions.create(
-            model="whisper-1", 
-            file=audio_file,
-            language="en", # Forces English to stop the Korean hallucinations
-            prompt="Technical interview conversation about software development." # Contextual hint
-        )
-    
-    os.remove(temp_path)
-    
-    # Filter out "hallucinations" (very short or nonsense noise)
-    text = transcript.text.strip()
-    if len(text) < 2: 
-        return {"text": ""} # Return empty so the AI doesn't reply to a 'noise' message
+    try:
+        with open(temp_path, "rb") as audio_file:
+            transcript = await client.audio.transcriptions.create(
+                model="whisper-1", 
+                file=audio_file,
+                language="en", # Forces English to stop the Korean hallucinations
+                prompt="Technical interview conversation about software development." # Contextual hint
+            )
         
-    return {"text": text}
+        # Filter out "hallucinations" (very short or nonsense noise)
+        text = transcript.text.strip()
+        if len(text) < 2: 
+            return {"text": ""} # Return empty so the AI doesn't reply to a 'noise' message
+            
+        return {"text": text}
+        
+    except Exception as e:
+        print(f"Transcription error: {e}")
+        return {"text": ""}
+        
+    finally:
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
 
 @app.websocket("/ws/interview")
 async def interview_websocket(websocket: WebSocket):
@@ -262,137 +271,163 @@ async def interview_websocket(websocket: WebSocket):
             msg = json.loads(data)
             
             if msg["type"] == "user_turn":
-                user_text = msg["text"]
-                
-                # Feature 4: Extract speech timing from client
-                speech_duration = msg.get("duration", 0)  # seconds of speaking
-                silence_duration = msg.get("silence_duration", 0)  # pause before speaking
-                
-                chat_history.append({"role": "user", "content": user_text})
-                session_data["transcript"].append({"role": "user", "content": user_text})
-                
-                # Feature 3: Mark answer time
-                if state:
-                    state.mark_question_answered(state.total_questions_asked)
-                
-                # Run evaluation, logic validation, and speech analysis IN PARALLEL
-                eval_task = None
-                logic_task = None
-                current_topic = "GENERAL"
-                
-                if state and state.current_question_text and not state.is_complete:
+                try:
+                    user_text = msg["text"]
+                    
+                    # Feature 4: Extract speech timing from client
+                    speech_duration = msg.get("duration", 0)  # seconds of speaking
+                    silence_duration = msg.get("silence_duration", 0)  # pause before speaking
+                    
+                    chat_history.append({"role": "user", "content": user_text})
+                    session_data["transcript"].append({"role": "user", "content": user_text})
+                    
+                    # Feature 3: Mark answer time
+                    if state:
+                        state.mark_question_answered(state.total_questions_asked)
+                    
+                    # Feature 1: Get topic for next question from plan
                     step = state.get_current_step()
                     current_topic = state.question_topics.get(state.total_questions_asked, "GENERAL")
                     
-                    if step:
-                        # Feature 2: Logic validation (in parallel with evaluation)
-                        eval_task = asyncio.create_task(evaluate_answer(
-                            question=state.current_question_text,
-                            answer=user_text,
-                            category=step["category_name"],
-                            topic=step["topic"],
-                            candidate_summary=session_data["candidate_summary"],
-                            job_desc=session_data["job_description"]
-                        ))
-                        logic_task = asyncio.create_task(validate_logic(
-                            question=state.current_question_text,
-                            answer=user_text,
-                            topic=current_topic,
-                            chat_history=chat_history
-                        ))
-                        
-                        # Await both
-                        scores, logic_result = await asyncio.gather(eval_task, logic_task)
-                        
-                        # Record the score
-                        state.record_score(
-                            question=state.current_question_text,
-                            category=step["category_name"],
-                            topic=step["topic"],
-                            accuracy=scores["accuracy"],
-                            depth=scores["depth"],
-                            clarity=scores["clarity"]
-                        )
-                        session_data["answer_scores"].append({
-                            "question": state.current_question_text,
-                            "answer": user_text,
-                            "category": step["category_name"],
-                            "scores": scores
-                        })
-                        
-                        print(f"[Evaluation] Q{state.total_questions_asked}: accuracy={scores['accuracy']}, depth={scores['depth']}, clarity={scores['clarity']}")
-                        
-                        # Feature 2: Send logic feedback if issue found
-                        if logic_result and logic_result.get("has_issue"):
-                            state.record_logical_error(
-                                question_index=state.total_questions_asked,
-                                issue_type=logic_result["issue_type"],
-                                feedback=logic_result["feedback"],
-                                severity=logic_result["severity"]
-                            )
-                            await websocket.send_json({
-                                "type": "logic_feedback",
-                                "issue_type": logic_result["issue_type"],
-                                "feedback": logic_result["feedback"],
-                                "severity": logic_result["severity"]
-                            })
-                            print(f"[Logic Validator] {logic_result['severity'].upper()}: {logic_result['feedback']}")
-                        
-                        # Advance the plan
-                        state.advance()
-                
-                # Feature 4: Speech confidence analysis
-                speech_analysis = analyze_speech_confidence(
-                    text=user_text,
-                    duration_seconds=speech_duration,
-                    silence_duration=silence_duration
-                )
-                
-                if speech_analysis["confidence_level"] != "high" or speech_analysis["long_silence"]:
+                    # Generate next question context
+                    interview_context = state.to_context_string() if state else ""
+                    
+                    # Create tasks for parallel execution
+                    eval_task = None
+                    logic_task = None
+                    ai_response_task = asyncio.create_task(get_ai_response(
+                        session_data["candidate_summary"],
+                        session_data["job_description"],
+                        chat_history,
+                        interview_context
+                    ))
+                    
+                    if state and state.current_question_text and not state.is_complete:
+                        if step:
+                            # Feature 2: Logic validation & Evaluation
+                            eval_task = asyncio.create_task(evaluate_answer(
+                                question=state.current_question_text,
+                                answer=user_text,
+                                category=step["category_name"],
+                                topic=step["topic"],
+                                candidate_summary=session_data["candidate_summary"],
+                                job_desc=session_data["job_description"]
+                            ))
+                            logic_task = asyncio.create_task(validate_logic(
+                                question=state.current_question_text,
+                                answer=user_text,
+                                topic=current_topic,
+                                chat_history=chat_history
+                            ))
+
+                    # Wait for AI response first to reduce latency
+                    try:
+                        ai_reply = await ai_response_task
+                    except Exception as e:
+                        print(f"AI Generation Error: {e}")
+                        ai_reply = "I'm having trouble thinking of a response. Let's continue."
+
+                    # Send AI response immediately
+                    chat_history.append({"role": "assistant", "content": ai_reply})
+                    session_data["transcript"].append({"role": "ai", "content": ai_reply})
+                    
+                    audio_bytes = generate_audio(ai_reply)
+                    audio_b64 = base64.b64encode(audio_bytes).decode('utf-8') if audio_bytes else None
+                    
                     await websocket.send_json({
-                        "type": "speech_feedback",
-                        "wpm": speech_analysis["wpm"],
-                        "pace": speech_analysis["pace"],
-                        "filler_count": speech_analysis["filler_count"],
-                        "confidence_level": speech_analysis["confidence_level"],
-                        "long_silence": speech_analysis["long_silence"],
-                        "feedback": speech_analysis["feedback"]
+                        "type": "ai_turn",
+                        "text": ai_reply,
+                        "audio": audio_b64
                     })
-                    print(f"[Speech Analyzer] {speech_analysis['confidence_level']}: {speech_analysis['feedback']}")
-                
-                # Generate next question using plan context
-                interview_context = state.to_context_string() if state else ""
-                
-                ai_reply = await get_ai_response(
-                    session_data["candidate_summary"],
-                    session_data["job_description"],
-                    chat_history,
-                    interview_context
-                )
-                
-                # Track this question for next evaluation
-                if state:
-                    state.current_question_text = ai_reply
-                    # Feature 3: Mark when next question was asked
-                    state.mark_question_asked(state.total_questions_asked)
-                    # Feature 1: Get topic for next question from plan
-                    next_step = state.get_current_step()
-                    next_topic = next_step["topic"] if next_step else "General"
-                    state.question_topics[state.total_questions_asked] = next_topic
-                
-                chat_history.append({"role": "assistant", "content": ai_reply})
-                session_data["transcript"].append({"role": "ai", "content": ai_reply})
-                
-                audio_bytes = generate_audio(ai_reply)
-                audio_b64 = base64.b64encode(audio_bytes).decode('utf-8') if audio_bytes else None
-                
-                await websocket.send_json({
-                    "type": "ai_turn",
-                    "text": ai_reply,
-                    "audio": audio_b64
-                })
+
+                    # Process evaluation results in background (or await them now without blocking UI)
+                    if eval_task and logic_task:
+                        try:
+                            scores, logic_result = await asyncio.gather(eval_task, logic_task)
+                            
+                            # Record the score
+                            state.record_score(
+                                question=state.current_question_text,
+                                category=step["category_name"],
+                                topic=step["topic"],
+                                accuracy=scores["accuracy"],
+                                depth=scores["depth"],
+                                clarity=scores["clarity"]
+                            )
+                            session_data["answer_scores"].append({
+                                "question": state.current_question_text,
+                                "answer": user_text,
+                                "category": step["category_name"],
+                                "scores": scores
+                            })
+                            print(f"[Evaluation] Q{state.total_questions_asked}: accuracy={scores['accuracy']}, depth={scores['depth']}, clarity={scores['clarity']}")
+                            
+                            # Send logic feedback if issue found
+                            if logic_result and logic_result.get("has_issue"):
+                                state.record_logical_error(
+                                    question_index=state.total_questions_asked,
+                                    issue_type=logic_result["issue_type"],
+                                    feedback=logic_result["feedback"],
+                                    severity=logic_result["severity"]
+                                )
+                                # Send logic feedback asynchronously
+                                await websocket.send_json({
+                                    "type": "logic_feedback",
+                                    "issue_type": logic_result["issue_type"],
+                                    "feedback": logic_result["feedback"],
+                                    "severity": logic_result["severity"]
+                                })
+                                print(f"[Logic Validator] {logic_result['severity'].upper()}: {logic_result['feedback']}")
+                                
+                            # Advance the plan
+                            state.advance()
+                            
+                        except Exception as e:
+                            print(f"Evaluation Error: {e}")
+
+                    # Feature 4: Speech confidence analysis
+                    try:
+                        speech_analysis = analyze_speech_confidence(
+                            text=user_text,
+                            duration_seconds=speech_duration,
+                            silence_duration=silence_duration
+                        )
+                        
+                        if speech_analysis["confidence_level"] != "high" or speech_analysis["long_silence"]:
+                            await websocket.send_json({
+                                "type": "speech_feedback",
+                                "wpm": speech_analysis["wpm"],
+                                "pace": speech_analysis["pace"],
+                                "filler_count": speech_analysis["filler_count"],
+                                "confidence_level": speech_analysis["confidence_level"],
+                                "long_silence": speech_analysis["long_silence"],
+                                "feedback": speech_analysis["feedback"]
+                            })
+                            print(f"[Speech Analyzer] {speech_analysis['confidence_level']}: {speech_analysis['feedback']}")
+                    except Exception as e:
+                        print(f"Speech Analysis Error: {e}")
+                    
+                    # Track this question for next evaluation
+                    if state:
+                        state.current_question_text = ai_reply
+                        state.mark_question_asked(state.total_questions_asked)
+                        next_step = state.get_current_step()
+                        next_topic = next_step["topic"] if next_step else "General"
+                        state.question_topics[state.total_questions_asked] = next_topic
+
+                except Exception as processing_error:
+                    print(f"Error processing message: {processing_error}")
+                    traceback.print_exc()
+                    # Send a fallback message to keep the UI alive
+                    await websocket.send_json({
+                        "type": "ai_turn",
+                        "text": "I'm having a little trouble processing that. Could you say it again?",
+                        "audio": None
+                    })
+
     except Exception as e:
         print(f"WebSocket closed or error: {e}")
+        traceback.print_exc()
 
 @app.websocket("/ws/video")
 async def video_websocket(websocket: WebSocket):
@@ -473,15 +508,26 @@ async def get_user_progress(user_id: str):
     progress = await InterviewService.get_progress_data(user_id)
     return progress
 
-@app.get("/api/analytics")
-async def get_analytics():
-    """
-    Returns structured analytics data for the CandidateReport component.
-    Aggregates video_metrics and transcript into the expected format.
-    """
-    metrics = session_data["video_metrics"]
-    transcript = session_data["transcript"]
-    
+
+
+def calculate_percentile(score: float, all_scores: List[float]) -> float:
+    """Calculate percentile rank"""
+    if not all_scores:
+        return 0
+    below = sum(1 for s in all_scores if s < score)
+    return (below / len(all_scores)) * 100
+
+def get_most_common_emotion(interviews: List[Dict]) -> str:
+    """Get most common emotion across interviews"""
+    emotions = []
+    for interview in interviews:
+        emotions.append(interview["vision_metrics"]["average_emotion"])
+    if not emotions:
+        return "neutral"
+    return max(set(emotions), key=emotions.count)
+
+def generate_analytics_response(metrics, transcript, scores_summary=None):
+    """Helper to generate analytics response structure from raw data"""
     # Calculate averages from video metrics
     if metrics:
         avg_focus = sum(m["focus"] for m in metrics) / len(metrics)
@@ -542,9 +588,140 @@ async def get_analytics():
     ai_messages = sum(1 for t in transcript if t["role"] == "ai")
     talk_ratio = user_messages / max(1, ai_messages)
     
-    # Get answer evaluation scores from interview state
+    # Use answer evaluation to enhance technical_accuracy if available
+    if scores_summary and scores_summary.get("total_questions", 0) > 0:
+        # Scale LLM-evaluated accuracy (1-10) to 0-100 for the radar chart
+        technical_accuracy = scores_summary["overall_accuracy"] * 10
+        communication_score = scores_summary["overall_clarity"] * 10
+    else:
+        technical_accuracy = min(100, avg_confidence + 15)
+        communication_score = min(100, avg_emotion + 20)
+    
+    return {
+        "radar_chart_data": {
+            "technical_accuracy": technical_accuracy,
+            "communication": communication_score,
+            "confidence": avg_confidence,
+            "focus": avg_focus,
+            "emotional_intelligence": avg_emotion
+        },
+        "vision_analytics": {
+            "overall_eye_contact_percentage": avg_focus,
+            "overall_steadiness_percentage": 100 - avg_stress,
+            "per_question_metrics": per_question_metrics
+        },
+        "nlp_report": {
+            "total_filler_count": total_fillers,
+            "filler_rate": filler_rate,
+            "talk_to_listen_ratio": talk_ratio,
+            "most_common_fillers": most_common_fillers,
+            "sentiment_trend": sentiment_trend
+        },
+        "scoring_summary": {
+            "average_score": (avg_focus + avg_emotion + avg_confidence) / 3,
+            "scores_over_time": [m["confidence"] for m in metrics[-10:]] if metrics else []
+        },
+        "answer_evaluation": scores_summary
+    }
+
+@app.get("/api/analytics")
+async def get_analytics():
+    """Returns analytics for current active session"""
     state = session_data.get("interview_state")
     scores_summary = state.get_scores_summary() if state else None
+    
+    return generate_analytics_response(
+        session_data["video_metrics"],
+        session_data["transcript"],
+        scores_summary
+    )
+
+@app.get("/api/interview/{interview_id}/analytics")
+async def get_historical_analytics(interview_id: str):
+    """Returns analytics for a specific past interview"""
+    interview = await InterviewService.get_interview_by_id(interview_id)
+    if not interview:
+        raise HTTPException(status_code=404, detail="Interview not found")
+        
+    # Extract data from stored report
+    metrics = interview.video_metrics or []
+    transcript = interview.transcript or []
+    
+    # Construct scores summary if possible, or derive
+    scores_summary = None
+    if interview.questions_answers:
+        scores = [qa.semantic_score for qa in interview.questions_answers]
+        avg_score = sum(scores) / len(scores) if scores else 0
+        scores_summary = {
+            "total_questions": len(interview.questions_answers),
+            "overall_accuracy": avg_score / 10, # Converting back to 1-10 scale approximation
+            "overall_clarity": avg_score / 10,  # Approximation
+            "overall_depth": avg_score / 10     # Approximation
+        }
+        
+    return generate_analytics_response(metrics, transcript, scores_summary)
+
+def generate_analytics_response(metrics, transcript, scores_summary=None):
+    """Helper to generate analytics response structure from raw data"""
+    # Calculate averages from video metrics
+    if metrics:
+        avg_focus = sum(m["focus"] for m in metrics) / len(metrics)
+        avg_emotion = sum(m["emotion"] for m in metrics) / len(metrics)
+        avg_confidence = sum(m["confidence"] for m in metrics) / len(metrics)
+        avg_stress = sum(m.get("stress", 0) for m in metrics) / len(metrics)
+    else:
+        avg_focus = avg_emotion = avg_confidence = 0
+        avg_stress = 50
+    
+    # Calculate per-question metrics (group by 30-second windows)
+    per_question_metrics = []
+    if metrics:
+        # Group metrics into question-like segments
+        segment_size = max(1, len(metrics) // 5)  # Divide into ~5 segments
+        for i in range(0, len(metrics), segment_size):
+            segment = metrics[i:i+segment_size]
+            if segment:
+                per_question_metrics.append({
+                    "question_index": len(per_question_metrics) + 1,
+                    "eye_contact_percentage": sum(m["focus"] for m in segment) / len(segment),
+                    "confidence": sum(m["confidence"] for m in segment) / len(segment)
+                })
+    
+    # Sentiment trend from transcript (simplified)
+    sentiment_trend = []
+    for entry in transcript:
+        if entry["role"] == "user":
+            # Basic sentiment: positive words = +, negative words = -
+            text = entry["content"].lower()
+            positive_words = ["good", "great", "excellent", "love", "happy", "excited", "confident"]
+            negative_words = ["bad", "difficult", "hard", "nervous", "worried", "afraid", "confused"]
+            pos_count = sum(1 for w in positive_words if w in text)
+            neg_count = sum(1 for w in negative_words if w in text)
+            sentiment = (pos_count - neg_count) / max(1, pos_count + neg_count + 1)
+            sentiment_trend.append(sentiment)
+    
+    # Filler word detection
+    filler_words = ["um", "uh", "like", "you know", "basically", "actually", "literally"]
+    total_fillers = 0
+    filler_counts = {}
+    total_words = 0
+    
+    for entry in transcript:
+        if entry["role"] == "user":
+            words = entry["content"].lower().split()
+            total_words += len(words)
+            for filler in filler_words:
+                count = entry["content"].lower().count(filler)
+                total_fillers += count
+                filler_counts[filler] = filler_counts.get(filler, 0) + count
+    
+    most_common_fillers = sorted(filler_counts.items(), key=lambda x: x[1], reverse=True)[:5]
+    filler_rate = (total_fillers / max(1, total_words)) * 100
+    
+    # Talk-to-listen ratio
+    user_messages = sum(1 for t in transcript if t["role"] == "user")
+    ai_messages = sum(1 for t in transcript if t["role"] == "ai")
+    talk_ratio = user_messages / max(1, ai_messages)
     
     # Use answer evaluation to enhance technical_accuracy if available
     if scores_summary and scores_summary.get("total_questions", 0) > 0:
@@ -577,10 +754,47 @@ async def get_analytics():
         },
         "scoring_summary": {
             "average_score": (avg_focus + avg_emotion + avg_confidence) / 3,
-            "scores_over_time": [m["confidence"] for m in metrics[-10:]]
+            "scores_over_time": [m["confidence"] for m in metrics[-10:]] if metrics else []
         },
         "answer_evaluation": scores_summary
     }
+
+@app.get("/api/analytics")
+async def get_analytics():
+    """Returns analytics for current active session"""
+    state = session_data.get("interview_state")
+    scores_summary = state.get_scores_summary() if state else None
+    
+    return generate_analytics_response(
+        session_data["video_metrics"],
+        session_data["transcript"],
+        scores_summary
+    )
+
+@app.get("/api/interview/{interview_id}/analytics")
+async def get_historical_analytics(interview_id: str):
+    """Returns analytics for a specific past interview"""
+    interview = await InterviewService.get_interview_by_id(interview_id)
+    if not interview:
+        raise HTTPException(status_code=404, detail="Interview not found")
+        
+    # Extract data from stored report
+    metrics = interview.video_metrics or []
+    transcript = interview.transcript or []
+    
+    # Construct scores summary if possible, or derive
+    scores_summary = None
+    if interview.questions_answers:
+        scores = [qa.semantic_score for qa in interview.questions_answers]
+        avg_score = sum(scores) / len(scores) if scores else 0
+        scores_summary = {
+            "total_questions": len(interview.questions_answers),
+            "overall_accuracy": avg_score / 10, # Converting back to 1-10 scale approximation
+            "overall_clarity": avg_score / 10,  # Approximation
+            "overall_depth": avg_score / 10     # Approximation
+        }
+        
+    return generate_analytics_response(metrics, transcript, scores_summary)
 
 @app.get("/api/user/{user_id}/analytics")
 async def get_user_analytics(user_id: str):
@@ -597,6 +811,29 @@ async def get_comparison(user_id: str, job_role: str):
     if not comparison:
         raise HTTPException(status_code=404, detail="No data available")
     return comparison
+
+from services.pdf_service import generate_interview_pdf
+
+@app.get("/api/interview/{interview_id}/download")
+async def download_interview_pdf(interview_id: str):
+    """Generate and download PDF report for an interview"""
+    interview = await InterviewService.get_interview_by_id(interview_id)
+    if not interview:
+        raise HTTPException(status_code=404, detail="Interview not found")
+        
+    # Convert Pydantic model to dict
+    report_data = interview.model_dump()
+    
+    # Generate PDF
+    pdf_buffer = generate_interview_pdf(report_data)
+    
+    filename = f"Interview_Report_{interview_id[:8]}.pdf"
+    
+    return StreamingResponse(
+        pdf_buffer,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
 
 from services.report_generator import generate_report
 

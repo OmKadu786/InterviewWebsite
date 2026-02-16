@@ -54,8 +54,10 @@ class InterviewReport(BaseModel):
     nlp_metrics: NLPMetrics
     
     # Analytics
-    confidence_timeline: List[Dict[str, Any]]
-    emotion_timeline: List[Dict[str, Any]]
+    confidence_timeline: List[Dict[str, Any]] = []
+    emotion_timeline: List[Dict[str, Any]] = []
+    transcript: List[Dict[str, str]] = []  # Full chat history
+    video_metrics: List[Dict[str, Any]] = [] # Raw video metrics for replay/charts
     
     # AI Feedback
     strengths: List[str]

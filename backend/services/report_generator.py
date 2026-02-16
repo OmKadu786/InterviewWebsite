@@ -105,10 +105,12 @@ def generate_report(session_data: Dict[str, Any], user_id: str) -> InterviewRepo
         overall_semantic_score=overall_score,
         vision_metrics=vision_metrics_obj,
         nlp_metrics=nlp_metrics_obj,
-        confidence_timeline=[], # Can be built from video metrics
-        emotion_timeline=[],    # Can be built from emotions_list
-        strengths=[],           # Needs LLM summary
-        areas_for_improvement=[], # Needs LLM summary
+        confidence_timeline=[], 
+        emotion_timeline=[],
+        transcript=[{"role": t["role"], "content": t["content"]} for t in transcript],
+        video_metrics=video_metrics, # Store raw metrics for charts
+        strengths=session_data.get("feedback", {}).get("strengths", []),
+        areas_for_improvement=session_data.get("feedback", {}).get("improvements", []),
         overall_feedback="Generated automatically.",
         interview_number=1     # Needs DB lookup to find Nth interview
     )
