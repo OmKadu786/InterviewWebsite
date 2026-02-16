@@ -47,7 +47,6 @@ export const Layout: React.FC<LayoutProps> = ({ children, onDone, showDoneButton
           )
           }
 
-
           {/* Auth Section */}
           {user ? (
             <div className="relative">
