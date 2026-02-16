@@ -145,7 +145,7 @@ function App() {
 
   return (
     <ThemeProvider>
-      <Layout onDone={handleEndInterview} showDoneButton={view === 'interview'}>
+      <Layout onDone={handleEndInterview} showDoneButton={view === 'interview'} showLoginButton={view === 'landing'}>
         {view === 'landing' && (
           <>
             <Hero onStartConfirm={() => setView('setup')} />

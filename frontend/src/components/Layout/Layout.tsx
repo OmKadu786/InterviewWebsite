@@ -6,9 +6,10 @@ interface LayoutProps {
   children: React.ReactNode;
   onDone?: () => void;
   showDoneButton?: boolean;
+  showLoginButton?: boolean;
 }
 
-export const Layout: React.FC<LayoutProps> = ({ children, onDone, showDoneButton = false }) => {
+export const Layout: React.FC<LayoutProps> = ({ children, onDone, showDoneButton = false, showLoginButton = false }) => {
   const { theme, toggleTheme } = useTheme();
 
   return (
@@ -16,9 +17,9 @@ export const Layout: React.FC<LayoutProps> = ({ children, onDone, showDoneButton
       {/* Header */}
       <header className="h-16 border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50 px-6 flex items-center justify-between">
         <a href="/" className="flex items-center gap-2 font-bold text-xl cursor-pointer hover:opacity-80 transition-opacity">
-          <img 
-            src="/logo.png" 
-            alt="HireByte Logo" 
+          <img
+            src="/logo.png"
+            alt="HireByte Logo"
             className="w-8 h-8 object-contain"
           />
           <span>HireByte</span>
@@ -34,6 +35,14 @@ export const Layout: React.FC<LayoutProps> = ({ children, onDone, showDoneButton
               Done
             </button>
           )}
+          {showLoginButton && (
+            <button
+              onClick={() => { }} // Placeholder for now
+              className="bg-white text-black px-5 py-2 rounded-lg text-sm font-semibold hover:bg-gray-200 transition-colors shadow-lg"
+            >
+              Login
+            </button>
+          )}
           <button
             onClick={toggleTheme}
             className="p-2.5 rounded-full bg-gray-800 hover:bg-gray-700 text-white transition-colors border border-white/10 shadow-lg"
@@ -42,12 +51,12 @@ export const Layout: React.FC<LayoutProps> = ({ children, onDone, showDoneButton
             {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
           </button>
         </div>
-      </header>
+      </header >
 
       {/* Main Content Area */}
-      <main className="flex-1 overflow-hidden">
+      < main className="flex-1 overflow-hidden" >
         {children}
-      </main>
-    </div>
+      </main >
+    </div >
   );
 };
