@@ -11,11 +11,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from openai import AsyncOpenAI
 from dotenv import load_dotenv
 
-# Import fixed: using the new function name to avoid ImportError
 from services.pdf_service import extract_text_from_pdf
-from services.llm_service import get_ai_response, get_hint
+from services.llm_service import get_ai_response, get_hint, evaluate_answer
 from services.tts_service import generate_audio
 from services.video_service import process_video_frame, Stabilizer
+from services.resume_analyzer import analyze_resume, build_compact_summary
+from services.interview_planner import generate_interview_plan
+from services.interview_state import InterviewState
 
 load_dotenv()
 
@@ -40,10 +42,15 @@ camera_lock = threading.Lock()
 camera_active = False
 
 session_data = {
-    "resume_text": "", 
+    "resume_text": "",           # Raw text (kept for hints)
     "job_description": "",
-    "transcript": [],     # Stores {"role": "user"|"ai", "content": "..."}
-    "video_metrics": []   # Stores {"timestamp": float, "focus": int, "emotion": int, "confidence": int}
+    "candidate_profile": None,   # Structured profile from resume_analyzer
+    "candidate_summary": "",     # Compact summary for LLM prompts
+    "interview_plan": None,      # Fixed plan from interview_planner
+    "interview_state": None,     # InterviewState tracker instance
+    "transcript": [],            # Stores {"role": "user"|"ai", "content": "..."}
+    "video_metrics": [],         # Stores {"timestamp": float, "focus": int, "emotion": int, "confidence": int}
+    "answer_scores": []          # Stores per-answer evaluation scores
 }
 
 class HintRequest(BaseModel):
@@ -64,9 +71,32 @@ async def upload_resume(file: UploadFile = File(...), job_description: str = For
     text = extract_text_from_pdf(pdf_bytes)
     session_data["resume_text"] = text
     session_data["job_description"] = job_description
-    session_data["transcript"] = []     # Reset on new upload
-    session_data["video_metrics"] = []  # Reset on new upload
-    return {"message": "Data processed successfully!"}
+    session_data["transcript"] = []
+    session_data["video_metrics"] = []
+    session_data["answer_scores"] = []
+    
+    # Structured resume analysis (runs once at upload)
+    profile = await analyze_resume(text, job_description)
+    session_data["candidate_profile"] = profile
+    session_data["candidate_summary"] = build_compact_summary(profile)
+    
+    # Generate interview plan
+    plan = await generate_interview_plan(profile, job_description)
+    session_data["interview_plan"] = plan
+    session_data["interview_state"] = None  # Will be created at WebSocket connect
+    
+    print(f"[Resume Analyzer] Profile: {json.dumps(profile, indent=2)[:500]}")
+    print(f"[Interview Planner] Plan: {json.dumps(plan, indent=2)[:500]}")
+    
+    return {
+        "message": "Data processed successfully!",
+        "profile_summary": session_data["candidate_summary"],
+        "interview_plan": {
+            "total_questions": plan.get("total_questions", 10),
+            "categories": [c["name"] for c in plan.get("categories", [])],
+            "difficulty": plan.get("difficulty_baseline", "medium")
+        }
+    }
 
 @app.post("/transcribe")
 async def transcribe_audio(file: UploadFile = File(...)):
@@ -95,23 +125,36 @@ async def transcribe_audio(file: UploadFile = File(...)):
 async def interview_websocket(websocket: WebSocket):
     await websocket.accept()
     
-    # Track history for this specific connection
     chat_history = []
     
-    # 1. Automatic Greeting
-    if session_data["resume_text"]:
+    # Initialize interview state from the plan
+    plan = session_data.get("interview_plan")
+    if plan:
+        state = InterviewState(plan)
+        session_data["interview_state"] = state
+    else:
+        state = None
+    
+    # 1. Opening — use the structured plan for the first question
+    if session_data["candidate_summary"]:
+        interview_context = state.to_context_string() if state else ""
+        
         response_text = await get_ai_response(
-            session_data["resume_text"], 
+            session_data["candidate_summary"],
             session_data["job_description"],
-            chat_history
+            chat_history,
+            interview_context
         )
         
+        # Track the question for evaluation later
+        if state:
+            state.current_question_text = response_text
+        
         chat_history.append({"role": "assistant", "content": response_text})
+        session_data["transcript"].append({"role": "ai", "content": response_text})
+        
         audio_bytes = generate_audio(response_text)
-        if audio_bytes:
-            audio_b64 = base64.b64encode(audio_bytes).decode('utf-8')
-        else:
-            audio_b64 = None
+        audio_b64 = base64.b64encode(audio_bytes).decode('utf-8') if audio_bytes else None
         
         await websocket.send_json({
             "type": "ai_turn",
@@ -119,33 +162,70 @@ async def interview_websocket(websocket: WebSocket):
             "audio": audio_b64
         })
 
-    # 2. Conversation Loop
+    # 2. Conversation Loop with plan tracking + answer evaluation
     try:
         while True:
             data = await websocket.receive_text()
             msg = json.loads(data)
             
             if msg["type"] == "user_turn":
-                # Add user message to history
-                chat_history.append({"role": "user", "content": msg["text"]})
-                session_data["transcript"].append({"role": "user", "content": msg["text"]})
+                user_text = msg["text"]
+                chat_history.append({"role": "user", "content": user_text})
+                session_data["transcript"].append({"role": "user", "content": user_text})
                 
-                # Get next question/response from AI
+                # Evaluate the answer against the current question
+                if state and state.current_question_text and not state.is_complete:
+                    step = state.get_current_step()
+                    if step:
+                        scores = await evaluate_answer(
+                            question=state.current_question_text,
+                            answer=user_text,
+                            category=step["category_name"],
+                            topic=step["topic"],
+                            candidate_summary=session_data["candidate_summary"],
+                            job_desc=session_data["job_description"]
+                        )
+                        
+                        # Record the score
+                        state.record_score(
+                            question=state.current_question_text,
+                            category=step["category_name"],
+                            topic=step["topic"],
+                            accuracy=scores["accuracy"],
+                            depth=scores["depth"],
+                            clarity=scores["clarity"]
+                        )
+                        session_data["answer_scores"].append({
+                            "question": state.current_question_text,
+                            "answer": user_text,
+                            "category": step["category_name"],
+                            "scores": scores
+                        })
+                        
+                        print(f"[Evaluation] Q{state.total_questions_asked}: accuracy={scores['accuracy']}, depth={scores['depth']}, clarity={scores['clarity']}")
+                        
+                        # Advance the plan
+                        state.advance()
+                
+                # Generate next question using plan context
+                interview_context = state.to_context_string() if state else ""
+                
                 ai_reply = await get_ai_response(
-                    session_data["resume_text"],
+                    session_data["candidate_summary"],
                     session_data["job_description"],
-                    chat_history
+                    chat_history,
+                    interview_context
                 )
+                
+                # Track this question for next evaluation
+                if state:
+                    state.current_question_text = ai_reply
                 
                 chat_history.append({"role": "assistant", "content": ai_reply})
                 session_data["transcript"].append({"role": "ai", "content": ai_reply})
                 
-                # Generate and send audio response
                 audio_bytes = generate_audio(ai_reply)
-                if audio_bytes:
-                    audio_b64 = base64.b64encode(audio_bytes).decode('utf-8')
-                else:
-                    audio_b64 = None
+                audio_b64 = base64.b64encode(audio_bytes).decode('utf-8') if audio_bytes else None
                 
                 await websocket.send_json({
                     "type": "ai_turn",
@@ -184,12 +264,19 @@ async def video_websocket(websocket: WebSocket):
 async def get_report_data():
     """
     Returns the accumulated session data for the report page.
-    Frontend will calculate averages and stats.
+    Now includes per-answer evaluation scores from the interview state.
     """
+    # Get scores summary from interview state
+    state = session_data.get("interview_state")
+    scores_summary = state.get_scores_summary() if state else {"total_questions": 0, "per_question": [], "per_category": {}}
+    
     return {
         "transcript": session_data["transcript"],
         "video_metrics": session_data["video_metrics"],
-        "job_description": session_data["job_description"]
+        "job_description": session_data["job_description"],
+        "answer_evaluation": scores_summary,
+        "interview_plan": session_data.get("interview_plan"),
+        "candidate_profile": session_data.get("candidate_profile")
     }
 
 # ==================== WEBCAM STREAMING ENDPOINTS ====================
@@ -331,10 +418,23 @@ async def get_analytics():
     ai_messages = sum(1 for t in transcript if t["role"] == "ai")
     talk_ratio = user_messages / max(1, ai_messages)
     
+    # Get answer evaluation scores from interview state
+    state = session_data.get("interview_state")
+    scores_summary = state.get_scores_summary() if state else None
+    
+    # Use answer evaluation to enhance technical_accuracy if available
+    if scores_summary and scores_summary.get("total_questions", 0) > 0:
+        # Scale LLM-evaluated accuracy (1-10) to 0-100 for the radar chart
+        technical_accuracy = scores_summary["overall_accuracy"] * 10
+        communication_score = scores_summary["overall_clarity"] * 10
+    else:
+        technical_accuracy = min(100, avg_confidence + 15)
+        communication_score = min(100, avg_emotion + 20)
+    
     return {
         "radar_chart_data": {
-            "technical_accuracy": min(100, avg_confidence + 15),  # Derived metric
-            "communication": min(100, avg_emotion + 20),
+            "technical_accuracy": technical_accuracy,
+            "communication": communication_score,
             "confidence": avg_confidence,
             "focus": avg_focus,
             "emotional_intelligence": avg_emotion
@@ -353,8 +453,9 @@ async def get_analytics():
         },
         "scoring_summary": {
             "average_score": (avg_focus + avg_emotion + avg_confidence) / 3,
-            "scores_over_time": [m["confidence"] for m in metrics[-10:]]  # Last 10 readings
-        }
+            "scores_over_time": [m["confidence"] for m in metrics[-10:]]
+        },
+        "answer_evaluation": scores_summary
     }
 
 @app.get("/api/analytics/timeline")
