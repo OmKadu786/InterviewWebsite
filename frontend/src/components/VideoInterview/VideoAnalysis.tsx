@@ -124,7 +124,7 @@ export const VideoAnalysis: React.FC<VideoAnalysisProps> = ({
     };
 
     return (
-        <div className="flex flex-col h-full gap-4">
+        <div className="flex flex-col h-full min-h-0 gap-4">
             {/* Main Video Card */}
             <div className="relative flex-1 rounded-2xl overflow-hidden bg-black/40 border border-border/30 shadow-2xl backdrop-blur-sm group">
                 <Webcam
@@ -208,7 +208,7 @@ export const VideoAnalysis: React.FC<VideoAnalysisProps> = ({
             </div>
 
             {/* Metrics Panel - Using smoothed values */}
-            <div className="grid grid-cols-3 gap-3">
+            <div className="shrink-0 grid grid-cols-3 gap-3">
                 <MetricCard
                     label="Emotion"
                     value={smoothedMetrics.emotion}

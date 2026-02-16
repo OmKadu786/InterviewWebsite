@@ -28,11 +28,11 @@ client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 async def lifespan(app: FastAPI):
     # Startup: Initialize database
     try:
-        print("🔄 Initializing database...")
+        print("[...] Initializing database...")
         await init_db()
-        print("✅ Database initialized successfully")
+        print("[OK] Database initialized successfully")
     except Exception as e:
-        print(f"❌ Database initialization failed: {e}")
+        print(f"[ERROR] Database initialization failed: {e}")
         print(f"Error details: {type(e).__name__}")
         import traceback
         traceback.print_exc()
@@ -41,11 +41,11 @@ async def lifespan(app: FastAPI):
     
     # Shutdown: Close database connections
     try:
-        print("🔄 Closing database connections...")
+        print("[...] Closing database connections...")
         await close_db()
-        print("✅ Database connections closed")
+        print("[OK] Database connections closed")
     except Exception as e:
-        print(f"⚠️ Error closing database: {e}")
+        print(f"[WARN] Error closing database: {e}")
 
 # Initialize FastAPI with lifespan
 app = FastAPI(
@@ -482,9 +482,9 @@ async def get_comparison(user_id: str, job_role: str):
 
 if __name__ == "__main__":
     import uvicorn
-    print("🚀 Starting HireByte Backend Server...")
-    print("📡 Server: http://localhost:8000")
-    print("📚 API Docs: http://localhost:8000/docs")
+    print("Starting HireByte Backend Server...")
+    print("Server: http://localhost:8000")
+    print("API Docs: http://localhost:8000/docs")
     print("Press CTRL+C to stop\n")
     
     # FIXED: Changed "main:app" to app

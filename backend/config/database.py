@@ -35,7 +35,7 @@ async def init_db():
     try:
         # Test connection first
         await async_client.admin.command('ping')
-        print("✅ MongoDB connection successful")
+        print("[OK] MongoDB connection successful")
         
         # Create indexes
         await interviews_collection.create_index("user_id")
@@ -43,10 +43,10 @@ async def init_db():
         await interviews_collection.create_index([("user_id", 1), ("interview_date", -1)])
         await analytics_collection.create_index("user_id")
         
-        print("✅ Database initialized successfully")
+        print("[OK] Database initialized successfully")
     except Exception as e:
-        print(f"⚠️ Database initialization failed: {e}")
-        print("⚠️ Server will run without database functionality")
+        print(f"[WARN] Database initialization failed: {e}")
+        print("[WARN] Server will run without database functionality")
 
 async def test_connection():
     """Test database connection"""
@@ -61,4 +61,4 @@ async def close_db():
     """Close database connections"""
     async_client.close()
     sync_client.close()
-    print("🔒 Database connections closed")
+    print("[OK] Database connections closed")
