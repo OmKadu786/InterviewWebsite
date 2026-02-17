@@ -196,14 +196,12 @@ export function CandidateReport({ analyticsData, interviewId }: { analyticsData?
   };
 
   const exportToPDF = async () => {
-    if (interviewId) {
-      // Use backend generation if ID is available (History view)
+    if (interviewId && interviewId !== 'current') {
+      // Use backend generation if ID is available (History view) - though History is removed, handling for safety
       window.open(`${API_ENDPOINTS.uploadResume.replace('/upload-resume', '')}/api/interview/${interviewId}/download`, '_blank');
     } else {
-      // Fallback to client-side generation (Current session view)
-      const html2pdf = (await import('html2pdf.js')).default;
-      const el = document.getElementById('report-content');
-      if (el) html2pdf().set({ margin: 10, filename: 'hirebyte-ripis-report.pdf', image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2, backgroundColor: '#020617' }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' } }).from(el).save();
+      // Use backend generation for CURRENT session (from memory)
+      window.open(`${API_ENDPOINTS.uploadResume.replace('/upload-resume', '')}/api/session/download-pdf`, '_blank');
     }
   };
 

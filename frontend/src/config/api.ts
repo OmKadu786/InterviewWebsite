@@ -12,6 +12,7 @@ console.log('HireByte API Config (Hardcoded):', {
 
 export const API_ENDPOINTS = {
   uploadResume: `${API_BASE_URL}/upload-resume`,
+  startTopicInterview: `${API_BASE_URL}/start-topic-interview`,
   transcribe: `${API_BASE_URL}/transcribe`,
   getHint: `${API_BASE_URL}/get-hint`,
   stream: `${API_BASE_URL}/api/stream`,

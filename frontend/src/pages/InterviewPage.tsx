@@ -11,7 +11,7 @@ import { API_ENDPOINTS } from '../config/api';
 import { useAuth } from '../context/AuthContext';
 
 export const InterviewPage: React.FC = () => {
-    const { user } = useAuth();
+    // const { user } = useAuth(); // Removed unused
     const navigate = useNavigate();
     const location = useLocation();
     const { selectedFile, jobDescription } = location.state || {}; // Retrieve passed state
@@ -89,37 +89,16 @@ export const InterviewPage: React.FC = () => {
                 method: 'POST'
             });
 
-            if (user) {
-                // Save session to DB
-                const res = await fetch(`${API_ENDPOINTS.analytics}/../session/save`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ user_id: user.id })
-                });
+            // Navigate to Analytics page for summary (Performance Report)
+            // The Analytics page will fetch data from /api/analytics
+            navigate('/analytics?id=current');
 
-                if (res.ok) {
-                    const data = await res.json();
-                    if (data.interview_id) {
-                        // REQUIRED: Open PDF immediately in new tab
-                        const pdfUrl = `${API_ENDPOINTS.analytics}/../interview/${data.interview_id}/download`;
-                        window.open(pdfUrl, '_blank');
 
-                        // Navigate to detail view
-                        navigate(`/analytics?id=${data.interview_id}`);
-                        return;
-                    }
-                } else {
-                    console.error("Save failed", res.statusText);
-                    alert("Failed to save report! The 'interviews' table might be missing in Supabase. Please run the provided SQL script.");
-                }
-            }
         } catch (error) {
             console.error('Error ending interview:', error);
-            alert("An error occurred while saving the interview.");
+            alert("An error occurred while generating the report.");
+            navigate('/');
         }
-        // Only navigate to history if we couldn't show the specific report, 
-        // but getting here meant something went wrong.
-        navigate('/analytics');
     };
 
     return (

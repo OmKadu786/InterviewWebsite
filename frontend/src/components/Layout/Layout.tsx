@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../../context/ThemeContext';
-import { Moon, Sun, User, LogOut, History } from 'lucide-react';
+import { Moon, Sun, User, LogOut } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 interface LayoutProps {
@@ -44,14 +44,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, onDone, showDoneButton
           {/* Auth Section */}
           {user ? (
             <div className="flex items-center gap-2">
-              <button
-                onClick={() => navigate('/analytics')}
-                className="hidden md:flex items-center gap-2 bg-secondary/30 hover:bg-secondary/60 text-foreground px-3 py-1.5 rounded-full border border-border/50 transition-colors"
-                title="View Interview History"
-              >
-                <History size={16} className="text-muted-foreground" />
-                <span className="text-sm font-medium">History</span>
-              </button>
+
 
               <div className="relative">
                 <button

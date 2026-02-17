@@ -4,15 +4,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from pydantic import BaseModel
 from config.database import init_db, close_db
-from services.interview_services import InterviewService
+# from services.interview_services import InterviewService # Removed per user request
 from models.interview_schema import InterviewReport
-from services.pdf_service import extract_text_from_pdf
+from services.pdf_service import extract_text_from_pdf, generate_interview_pdf
 from services.llm_service import get_ai_response, get_hint, evaluate_answer
 from services.tts_service import generate_audio
 from services.video_service import process_video_frame, Stabilizer
 from services.resume_analyzer import analyze_resume, build_compact_summary
-from services.interview_planner import generate_interview_plan
+from services.interview_planner import generate_interview_plan, generate_topic_plan
 from services.interview_state import InterviewState
+from services.report_generator import generate_report
 from services.logic_validator import validate_logic
 from services.speech_analyzer import analyze_speech_confidence
 from services.weakness_engine import calculate_weakness_scores, detect_repeated_patterns, classify_topics
@@ -90,6 +91,10 @@ session_data = {
 class HintRequest(BaseModel):
     question: str
     level: str = "medium"  # small, medium, or full
+
+class TopicInterviewRequest(BaseModel):
+    topic: str  # AI_ML, DSA, or WEB_DEV
+    difficulty: str = "medium"  # easy, medium, or hard
 
 # Health check endpoints
 @app.get("/")
@@ -187,6 +192,47 @@ async def upload_resume(file: UploadFile = File(...), job_description: str = For
         }
     }
 
+@app.post("/start-topic-interview")
+async def start_topic_interview(request: TopicInterviewRequest):
+    """Start a topic-based interview (no resume needed)."""
+    valid_topics = ["AI_ML", "DSA", "WEB_DEV"]
+    if request.topic not in valid_topics:
+        raise HTTPException(status_code=400, detail=f"Invalid topic. Must be one of: {valid_topics}")
+    
+    difficulty = request.difficulty if request.difficulty in ("easy", "medium", "hard") else "medium"
+    
+    # Reset session for topic mode
+    session_data["resume_text"] = ""
+    session_data["job_description"] = ""
+    session_data["difficulty"] = difficulty
+    session_data["interview_topic"] = request.topic
+    session_data["candidate_profile"] = None
+    session_data["candidate_summary"] = ""
+    session_data["transcript"] = []
+    session_data["video_metrics"] = []
+    session_data["answer_scores"] = []
+    
+    # Generate topic-specific plan (no LLM call needed)
+    plan = generate_topic_plan(request.topic, difficulty)
+    session_data["interview_plan"] = plan
+    session_data["interview_state"] = None  # Will be created at WebSocket connect
+    
+    topic_labels = {"AI_ML": "AI / Machine Learning", "DSA": "Data Structures & Algorithms", "WEB_DEV": "Web Development"}
+    
+    print(f"[Topic Interview] Topic: {request.topic}, Difficulty: {difficulty}")
+    print(f"[Interview Planner] Plan: {json.dumps(plan, indent=2)[:500]}")
+    
+    return {
+        "message": f"{topic_labels[request.topic]} interview ready!",
+        "interview_plan": {
+            "total_questions": plan.get("total_questions", 9),
+            "categories": [c["name"] for c in plan.get("categories", [])],
+            "difficulty": difficulty,
+            "topic": request.topic,
+            "topic_label": topic_labels[request.topic]
+        }
+    }
+
 @app.post("/transcribe")
 async def transcribe_audio(file: UploadFile = File(...)):
     temp_path = "temp_voice.wav"
@@ -232,14 +278,16 @@ async def interview_websocket(websocket: WebSocket):
         state = None
     
     # 1. Opening — use the structured plan for the first question
-    if session_data["candidate_summary"]:
+    # Works in both resume mode (candidate_summary set) and topic mode (interview_topic set)
+    if session_data["candidate_summary"] or session_data.get("interview_topic"):
         interview_context = state.to_context_string() if state else ""
         
         response_text = await get_ai_response(
             session_data["candidate_summary"],
             session_data["job_description"],
             chat_history,
-            interview_context
+            interview_context,
+            session_data.get("interview_topic", "")
         )
         
         # Track the question for evaluation later
@@ -299,7 +347,8 @@ async def interview_websocket(websocket: WebSocket):
                         session_data["candidate_summary"],
                         session_data["job_description"],
                         chat_history,
-                        interview_context
+                        interview_context,
+                        session_data.get("interview_topic", "")
                     ))
                     
                     if state and state.current_question_text and not state.is_complete:
@@ -348,6 +397,7 @@ async def interview_websocket(websocket: WebSocket):
                             # Record the score
                             state.record_score(
                                 question=state.current_question_text,
+                                answer=user_text,
                                 category=step["category_name"],
                                 topic=step["topic"],
                                 accuracy=scores["accuracy"],
@@ -479,34 +529,34 @@ async def get_report_data():
     }
 
 # Database endpoints
-@app.post("/api/interview/save")
-async def save_interview_report(report: InterviewReport):
-    """Save interview report"""
+# History endpoints removed per user request
+
+@app.get("/api/session/download-pdf")
+async def download_session_pdf():
+    """Generates and downloads PDF from current session data without saving to DB"""
     try:
-        interview_id = await InterviewService.save_interview(report)
-        return {"interview_id": interview_id, "message": "Interview saved successfully"}
+        # Use a temporary user ID for the report generation
+        temp_user_id = "session_user"
+        
+        # Generate the report object from current session data
+        report = generate_report(session_data, temp_user_id)
+        
+        # Convert report to dict for PDF service
+        # Matches original behavior: returns objects (datetime, etc.) rather than serialized JSON
+        report_data = report.model_dump()
+        
+        # Generate PDF bytes
+        pdf_buffer = generate_interview_pdf(report_data)
+        
+        return StreamingResponse(
+            pdf_buffer,
+            media_type="application/pdf",
+            headers={"Content-Disposition": "attachment; filename=interview_report.pdf"}
+        )
     except Exception as e:
+        print(f"Error generating PDF: {e}")
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
-
-@app.get("/api/interview/{interview_id}")
-async def get_interview(interview_id: str):
-    """Get specific interview"""
-    interview = await InterviewService.get_interview_by_id(interview_id)
-    if not interview:
-        raise HTTPException(status_code=404, detail="Interview not found")
-    return interview
-
-@app.get("/api/user/{user_id}/interviews")
-async def get_user_interviews(user_id: str, limit: int = 10):
-    """Get user's interview history"""
-    interviews = await InterviewService.get_user_interviews(user_id, limit)
-    return {"interviews": interviews, "count": len(interviews)}
-
-@app.get("/api/user/{user_id}/progress")
-async def get_user_progress(user_id: str):
-    """Get user's progress over time"""
-    progress = await InterviewService.get_progress_data(user_id)
-    return progress
 
 
 

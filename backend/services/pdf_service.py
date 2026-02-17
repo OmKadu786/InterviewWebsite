@@ -41,19 +41,26 @@ def generate_interview_pdf(report_data: dict) -> BytesIO:
     bold_style = ParagraphStyle(name="Bold", parent=styles["Normal"], fontName="Helvetica-Bold")
     
     # Extract data safely with defaults
-    role = report_data.get("role_title", "N/A")
-    date_str = report_data.get("created_at", datetime.now().strftime("%Y-%m-%d"))
-    score = report_data.get("performance_score", 0)
+    # Support both InterviewReport keys and DB keys
+    role = report_data.get("job_role") or report_data.get("role_title", "N/A")
     
-    # feedback_json usually contains the detailed report
+    date_val = report_data.get("interview_date") or report_data.get("created_at")
+    if isinstance(date_val, str):
+        date_str = date_val[:10]
+    elif hasattr(date_val, "strftime"):
+        date_str = date_val.strftime("%Y-%m-%d")
+    else:
+        date_str = datetime.now().strftime("%Y-%m-%d")
+        
+    score = report_data.get("overall_semantic_score") or report_data.get("performance_score", 0)
+    
+    # feedback_json might be nested (DB row) or the object itself (InterviewReport)
     feedback = report_data.get("feedback_json", {})
     if not feedback: 
-        # Fallback if feedback_json is not populated but other fields are
+        # If no explicit feedback_json, the whole object is likely the report
         feedback = report_data 
-
-    candidate_summary = feedback.get("candidate_summary", "Candidate")
-    
-    # Metadata Section
+        
+    # Start Metadata Section
     metadata = [
         ["Job Role:", role],
         ["Date:", date_str],

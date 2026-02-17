@@ -79,11 +79,12 @@ class InterviewState:
         if self.current_category_idx >= len(categories):
             self.is_complete = True
     
-    def record_score(self, question: str, category: str, topic: str, 
+    def record_score(self, question: str, answer: str, category: str, topic: str, 
                      accuracy: int, depth: int, clarity: int):
         """Record an answer evaluation score."""
         self.answer_scores.append({
             "question": question,
+            "answer": answer,
             "category": category,
             "topic": topic,
             "accuracy": accuracy,

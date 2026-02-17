@@ -1,14 +1,25 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FileUpload } from '../components/FileUpload';
-import { Loader2, ArrowRight } from 'lucide-react';
+import { Loader2, ArrowRight, Brain, Code, Globe } from 'lucide-react';
 import { API_ENDPOINTS } from '../config/api';
 import { ConsentModal } from '../components/ConsentModal';
 
+type InterviewMode = 'resume' | 'topic';
+type TopicOption = 'AI_ML' | 'DSA' | 'WEB_DEV';
+
+const TOPIC_OPTIONS: { key: TopicOption; label: string; icon: React.ReactNode; description: string }[] = [
+    { key: 'AI_ML', label: 'AI / ML', icon: <Brain size={28} />, description: 'Machine Learning, Neural Networks, NLP, Computer Vision' },
+    { key: 'DSA', label: 'DSA', icon: <Code size={28} />, description: 'Arrays, Trees, Graphs, DP, Sorting, Searching' },
+    { key: 'WEB_DEV', label: 'Web Dev', icon: <Globe size={28} />, description: 'HTML/CSS, JavaScript, React, APIs, Full-Stack' },
+];
+
 export const SetupPage: React.FC = () => {
     const navigate = useNavigate();
+    const [interviewMode, setInterviewMode] = useState<InterviewMode>('resume');
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [jobDescription, setJobDescription] = useState('');
+    const [selectedTopic, setSelectedTopic] = useState<TopicOption | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
     const [showConsentModal, setShowConsentModal] = useState(false);
@@ -16,8 +27,12 @@ export const SetupPage: React.FC = () => {
         return localStorage.getItem('aiConsent') === 'true';
     });
 
+    const canStart = interviewMode === 'resume'
+        ? (selectedFile && jobDescription)
+        : (selectedTopic !== null);
+
     const handleStartInterviewClick = () => {
-        if (!selectedFile || !jobDescription) return;
+        if (!canStart) return;
 
         if (consentGiven) {
             proceedWithInterview();
@@ -28,6 +43,7 @@ export const SetupPage: React.FC = () => {
 
     const handleConsentAgree = () => {
         setConsentGiven(true);
+        localStorage.setItem('aiConsent', 'true');
         setShowConsentModal(false);
         proceedWithInterview();
     };
@@ -35,32 +51,52 @@ export const SetupPage: React.FC = () => {
     const proceedWithInterview = async () => {
         setIsSubmitting(true);
         try {
-            const formData = new FormData();
-            formData.append('file', selectedFile!);
-            formData.append('job_description', jobDescription);
-            formData.append('difficulty', difficulty);
+            if (interviewMode === 'resume') {
+                // Existing resume upload flow
+                const formData = new FormData();
+                formData.append('file', selectedFile!);
+                formData.append('job_description', jobDescription);
+                formData.append('difficulty', difficulty);
 
-            const response = await fetch(API_ENDPOINTS.uploadResume, {
-                method: 'POST',
-                body: formData,
-            });
+                const response = await fetch(API_ENDPOINTS.uploadResume, {
+                    method: 'POST',
+                    body: formData,
+                });
 
-            if (!response.ok) throw new Error("Backend upload failed");
+                if (!response.ok) throw new Error("Backend upload failed");
 
-            // Pass state to the interview page usually via context or location state
-            // For now, we'll store basic info in localStorage or rely on backend session
-            // But since the original App.tsx relied on local state, we should probably pass it via navigation state
-            navigate('/interview', {
-                state: {
-                    selectedFile,
-                    jobDescription,
-                    difficulty
-                }
-            });
+                navigate('/interview', {
+                    state: {
+                        selectedFile,
+                        jobDescription,
+                        difficulty,
+                        interviewMode: 'resume'
+                    }
+                });
+            } else {
+                // Topic-based interview flow
+                const response = await fetch(API_ENDPOINTS.startTopicInterview, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        topic: selectedTopic,
+                        difficulty: difficulty,
+                    }),
+                });
 
+                if (!response.ok) throw new Error("Backend topic setup failed");
+
+                navigate('/interview', {
+                    state: {
+                        selectedTopic,
+                        difficulty,
+                        interviewMode: 'topic'
+                    }
+                });
+            }
         } catch (error) {
             console.error('Error starting interview:', error);
-            alert(`Connection Error: ${error}\n\nCould not connect to: ${API_ENDPOINTS.uploadResume}\n\nPlease check console for details.`);
+            alert(`Connection Error: ${error}\n\nPlease check console for details.`);
         } finally {
             setIsSubmitting(false);
         }
@@ -73,22 +109,77 @@ export const SetupPage: React.FC = () => {
                     <h2 className="text-2xl font-bold mb-2">
                         <span className="text-hirebyte-mint">HireByte</span> Setup
                     </h2>
-                    <p className="text-muted-foreground">Upload your resume to personalize the AI interview.</p>
+                    <p className="text-muted-foreground">Choose your interview mode to get started.</p>
                 </div>
 
                 <div className="space-y-6">
-                    <FileUpload onFileSelect={setSelectedFile} selectedFile={selectedFile} />
-
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium">Job Description</label>
-                        <textarea
-                            className="w-full p-3 bg-secondary/30 border border-input rounded-xl outline-none focus:ring-2 focus:ring-hirebyte-mint/30 min-h-[100px] resize-none"
-                            placeholder="Paste job requirements..."
-                            value={jobDescription}
-                            onChange={(e) => setJobDescription(e.target.value)}
-                        />
+                    {/* Mode Toggle */}
+                    <div className="grid grid-cols-2 gap-2 p-1 bg-secondary/30 rounded-xl">
+                        <button
+                            onClick={() => setInterviewMode('resume')}
+                            className={`py-2.5 px-4 rounded-lg text-sm font-medium transition-all ${interviewMode === 'resume'
+                                ? 'bg-hirebyte-mint text-white shadow-md'
+                                : 'text-muted-foreground hover:text-foreground'
+                                }`}
+                        >
+                            📄 Resume Upload
+                        </button>
+                        <button
+                            onClick={() => setInterviewMode('topic')}
+                            className={`py-2.5 px-4 rounded-lg text-sm font-medium transition-all ${interviewMode === 'topic'
+                                ? 'bg-hirebyte-mint text-white shadow-md'
+                                : 'text-muted-foreground hover:text-foreground'
+                                }`}
+                        >
+                            🎯 Topic Practice
+                        </button>
                     </div>
 
+                    {/* Resume Mode */}
+                    {interviewMode === 'resume' && (
+                        <>
+                            <FileUpload onFileSelect={setSelectedFile} selectedFile={selectedFile} />
+
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Job Description</label>
+                                <textarea
+                                    className="w-full p-3 bg-secondary/30 border border-input rounded-xl outline-none focus:ring-2 focus:ring-hirebyte-mint/30 min-h-[100px] resize-none"
+                                    placeholder="Paste job requirements..."
+                                    value={jobDescription}
+                                    onChange={(e) => setJobDescription(e.target.value)}
+                                />
+                            </div>
+                        </>
+                    )}
+
+                    {/* Topic Mode */}
+                    {interviewMode === 'topic' && (
+                        <div className="space-y-3">
+                            <label className="text-sm font-medium">Select Interview Topic</label>
+                            <div className="grid grid-cols-3 gap-3">
+                                {TOPIC_OPTIONS.map((opt) => (
+                                    <button
+                                        key={opt.key}
+                                        onClick={() => setSelectedTopic(opt.key)}
+                                        className={`flex flex-col items-center gap-2 p-4 rounded-xl border text-center transition-all ${selectedTopic === opt.key
+                                            ? 'bg-hirebyte-mint/10 border-hirebyte-mint text-hirebyte-mint shadow-md shadow-hirebyte-mint/10'
+                                            : 'bg-secondary/30 border-border hover:border-hirebyte-mint/50 text-muted-foreground hover:text-foreground'
+                                            }`}
+                                    >
+                                        {opt.icon}
+                                        <span className="text-sm font-semibold">{opt.label}</span>
+                                    </button>
+                                ))}
+                            </div>
+                            {selectedTopic && (
+                                <p className="text-xs text-muted-foreground text-center animate-in fade-in">
+                                    {TOPIC_OPTIONS.find(o => o.key === selectedTopic)?.description}
+                                </p>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Difficulty Selector (both modes) */}
                     <div className="space-y-2">
                         <label className="text-sm font-medium">Interview Difficulty</label>
                         <div className="grid grid-cols-3 gap-2">
@@ -114,7 +205,7 @@ export const SetupPage: React.FC = () => {
 
                     <button
                         onClick={handleStartInterviewClick}
-                        disabled={!selectedFile || !jobDescription || isSubmitting}
+                        disabled={!canStart || isSubmitting}
                         className="w-full py-3 bg-gradient-to-r from-hirebyte-blue to-hirebyte-blue-light text-white font-semibold rounded-xl flex items-center justify-center gap-2 hover:from-hirebyte-mint hover:to-emerald-500 transition-all duration-300 disabled:opacity-50"
                     >
                         {isSubmitting ? <Loader2 className="animate-spin" /> : <span>Start Interview <ArrowRight size={18} className="inline ml-1" /></span>}

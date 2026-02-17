@@ -74,8 +74,12 @@ def generate_report(session_data: Dict[str, Any], user_id: str) -> InterviewRepo
     if state and state.answer_scores:
         for idx, score_data in enumerate(state.answer_scores):
             # Calculate a semantic score 0-100 based on accuracy, depth, clarity
-            # score_data has "scores": {"accuracy": X, "depth": Y, "clarity": Z}
-            s = score_data["scores"]
+            # score_data might be flattened (InterviewState) or nested (session_data)
+            if "scores" in score_data:
+                s = score_data["scores"]
+            else:
+                s = score_data
+                
             avg_s = (s["accuracy"] + s["depth"] + s["clarity"]) / 3 * 10
             total_semantic_score += avg_s
             
@@ -91,11 +95,16 @@ def generate_report(session_data: Dict[str, Any], user_id: str) -> InterviewRepo
     
     overall_score = total_semantic_score / len(qa_list) if qa_list else 0
     
+    # Determine job role
+    topic_map = {"AI_ML": "AI Engineer", "DSA": "Software Engineer", "WEB_DEV": "Full Stack Developer"}
+    topic = session_data.get("interview_topic")
+    role = topic_map.get(topic, "Software Engineer")
+    
     # 4. Construct Report
     report = InterviewReport(
         user_id=user_id,
         interview_date=datetime.utcnow(),
-        job_role="Software Engineer", # Should come from job_description analysis or user input
+        job_role=role,
         company="Unknown",
         interview_duration=len(transcript) * 30, # Approx duration
         resume_filename="resume.pdf",
@@ -119,7 +128,8 @@ def generate_report(session_data: Dict[str, Any], user_id: str) -> InterviewRepo
     if state:
         report.hint_usage = state.hint_usage
         report.logical_errors = state.logical_errors
-        report.question_topics = state.question_topics
+        # Ensure keys are strings for Pydantic/JSON compatibility
+        report.question_topics = {str(k): v for k, v in state.question_topics.items()} if state.question_topics else None
         # report.time_per_question = state.question_timestamps # Type mismatch possible, map carefully
         
     return report

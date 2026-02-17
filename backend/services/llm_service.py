@@ -8,17 +8,43 @@ client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 
 async def get_ai_response(candidate_summary: str, job_desc: str, chat_history: list, 
-                          interview_context: str = "") -> str:
+                          interview_context: str = "", difficulty: str = "medium", topic: str = "") -> str:
     """
     Generate the next interview question based on the structured plan.
     
     Args:
-        candidate_summary: Compact profile summary (not raw resume)
-        job_desc: Job description
+        candidate_summary: Compact profile summary (or empty string for topic mode)
+        job_desc: Job description (or empty string for topic mode)
         chat_history: Conversation history
         interview_context: Current step info from InterviewState
+        difficulty: easy/medium/hard
+        topic: Specific technical topic (if in topic mode)
     """
-    system_prompt = f"""You are a professional interviewer conducting a structured job interview.
+    
+    # Mode-switching logic
+    if topic and not candidate_summary:
+        # Topic Mode Prompt
+        system_prompt = f"""You are an expert technical interviewer specializing in {topic}.
+        
+INTERVIEW CONTEXT:
+Topic: {topic}
+Difficulty: {difficulty}
+Plan Status:
+{interview_context}
+
+BEHAVIOR RULES:
+- Ask exactly ONE question per turn.
+- Your question MUST target the topic specified in the plan status above.
+- If this is the introduction: ask the candidate about their background in {topic}.
+- If this is the closing: thank them and ask if they have questions.
+- Stick to the difficulty level: {difficulty}.
+- Do NOT repeat questions.
+- Be encouraging but rigorous.
+- Sound like a real senior engineer, not a bot.
+"""
+    else:
+        # Resume Mode Prompt (Existing logic)
+        system_prompt = f"""You are a professional interviewer conducting a structured job interview.
 
 JOB ROLE: {job_desc}
 
