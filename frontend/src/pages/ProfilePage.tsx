@@ -34,7 +34,7 @@ export function ProfilePage() {
 
             if (!profileData && !profileError) {
                 // Create profile if not exists
-                const { data: newProfile, error: newProfileError } = await supabase
+                const { data: newProfile } = await supabase
                     .from('profiles')
                     .insert([{ id: user.id, full_name: user.user_metadata.full_name, avatar_url: user.user_metadata.avatar_url }])
                     .select()
@@ -46,7 +46,7 @@ export function ProfilePage() {
             setProfile(profileData || { full_name: user.email?.split('@')[0] }); // Fallback
 
             // Get interviews (Mock data for now if table doesn't exist)
-            const { data: interviewData, error: interviewError } = await supabase
+            const { data: interviewData } = await supabase
                 .from('interviews')
                 .select('*')
                 .eq('user_id', user.id)

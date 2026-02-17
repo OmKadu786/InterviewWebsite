@@ -24,32 +24,40 @@ export function FileUpload({ onFileSelect, selectedFile }: FileUploadProps) {
   };
 
   return (
-    <div className="space-y-2">
-      <label className="block text-sm font-medium text-slate-300">Resume Upload</label>
-      {!selectedFile ? (
+    <div className="space-y-3">
+        {!selectedFile ? (
         <div
           onDragOver={handleDragOver} onDragLeave={handleDragLeave} onDrop={handleDrop}
           onClick={() => fileInputRef.current?.click()}
-          className={`relative border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-all duration-200 ${
-            isDragging ? 'border-indigo-400 bg-indigo-950/50' : 'border-slate-600 hover:border-slate-500 bg-slate-800/50'
+          className={`relative border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-300 group ${
+            isDragging 
+                ? 'border-emerald-500 bg-emerald-500/10 shadow-[0_0_20px_rgba(16,185,129,0.2)]' 
+                : 'border-white/10 bg-white/5 hover:border-emerald-500/30 hover:bg-emerald-500/5'
           }`}
         >
           <input ref={fileInputRef} type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => onFileSelect(e.target.files?.[0] || null)} className="hidden" />
-          <Upload className="w-10 h-10 mx-auto mb-3 text-slate-400" />
-          <p className="text-slate-300 font-medium mb-1">Drop your resume here or click to browse</p>
-          <p className="text-sm text-slate-500">PDF, JPG, or PNG files</p>
+          <div className={`w-12 h-12 mx-auto mb-4 rounded-full flex items-center justify-center transition-all ${isDragging ? 'bg-emerald-500/20 text-emerald-400' : 'bg-white/5 text-neutral-400 group-hover:text-emerald-500 group-hover:bg-emerald-500/10'}`}>
+            <Upload size={24} />
+          </div>
+          <p className="text-white font-medium mb-1 group-hover:text-emerald-400 transition-colors">Drop resume or click to browse</p>
+          <p className="text-xs text-neutral-500">Supported: PDF, JPG, PNG</p>
         </div>
       ) : (
-        <div className="flex items-center justify-between p-4 bg-slate-800 border border-slate-700 rounded-lg">
-          <div className="flex items-center space-x-3">
-            <FileText className="w-8 h-8 text-indigo-400" />
+        <div className="flex items-center justify-between p-4 glass-card group hover:border-emerald-500/30">
+          <div className="flex items-center space-x-4">
+            <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-500">
+                <FileText size={24} />
+            </div>
             <div>
-              <p className="text-slate-200 font-medium">{selectedFile.name}</p>
-              <p className="text-sm text-slate-500">{(selectedFile.size / 1024).toFixed(2)} KB</p>
+              <p className="text-white font-medium text-sm">{selectedFile.name}</p>
+              <p className="text-xs text-neutral-500">{(selectedFile.size / 1024).toFixed(2)} KB</p>
             </div>
           </div>
-          <button onClick={() => onFileSelect(null)} className="p-2 hover:bg-slate-700 rounded-lg transition-colors">
-            <X className="w-5 h-5 text-slate-400 hover:text-slate-200" />
+          <button 
+            onClick={(e) => { e.stopPropagation(); onFileSelect(null); }} 
+            className="p-2 hover:bg-white/10 rounded-lg transition-colors text-neutral-400 hover:text-white"
+          >
+            <X size={18} />
           </button>
         </div>
       )}

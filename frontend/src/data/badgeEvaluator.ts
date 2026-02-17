@@ -4,6 +4,17 @@
  * All thresholds are intentionally reasonable so users earn a handful of badges per session.
  */
 
+export interface AnswerEvaluationQuestion {
+    question: string;
+    answer: string;
+    category: string;
+    topic: string;
+    accuracy: number;
+    depth: number;
+    clarity: number;
+    average: number;
+}
+
 export interface AnalyticsInput {
     radar_chart_data: {
         technical_accuracy: number;
@@ -37,8 +48,8 @@ export interface AnalyticsInput {
         overall_accuracy?: number;
         overall_depth?: number;
         overall_clarity?: number;
-        per_question?: any[];
-        per_category?: Record<string, any>;
+        per_question?: AnswerEvaluationQuestion[];
+        per_category?: Record<string, number>;
     } | null;
 }
 
@@ -50,7 +61,7 @@ export interface WeaknessInput {
         severity: string;
     }>;
     hint_usage?: Record<string, string[]>;
-    [key: string]: any;
+    [key: string]: unknown;
 }
 
 /**

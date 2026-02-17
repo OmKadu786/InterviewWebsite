@@ -11,7 +11,6 @@ import { API_ENDPOINTS } from '../config/api';
 import { useAuth } from '../context/AuthContext';
 
 export const InterviewPage: React.FC = () => {
-    // const { user } = useAuth(); // Removed unused
     const navigate = useNavigate();
     const location = useLocation();
     const { selectedFile, jobDescription } = location.state || {}; // Retrieve passed state

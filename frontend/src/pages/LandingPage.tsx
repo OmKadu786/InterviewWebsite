@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Hero } from '../components/Home/Hero';
+import { BackgroundAnimation } from '../components/Home/BackgroundAnimation';
 import { WelcomeModal } from '../components/WelcomeModal';
 import { useNavigate } from 'react-router-dom';
 import { LoginModal } from '../components/Auth/LoginModal';
@@ -13,6 +14,7 @@ export const LandingPage: React.FC = () => {
 
     return (
         <>
+            <BackgroundAnimation />
             <Hero onStartConfirm={() => navigate('/setup')} />
             <WelcomeModal
                 isOpen={showWelcomeModal}

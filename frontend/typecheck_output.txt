@@ -1,0 +1,13 @@
+
+> vite-react-typescript-starter@0.0.0 typecheck
+> tsc --noEmit -p tsconfig.app.json
+
+src/components/Interview/ChatBox.tsx(20,27): error TS6133: 'onEnd' is declared but its value is never read.
+src/components/Layout/Layout.tsx(15,59): error TS6133: 'onDone' is declared but its value is never read.
+src/components/Layout/Layout.tsx(15,67): error TS6133: 'showDoneButton' is declared but its value is never read.
+src/components/Layout/Layout.tsx(19,9): error TS6133: 'navigate' is declared but its value is never read.
+src/pages/AnalyticsPage.tsx(10,11): error TS6133: 'user' is declared but its value is never read.
+src/pages/InterviewPage.tsx(2,41): error TS2307: Cannot find module 'react-resizable-panels' or its corresponding type declarations.
+src/pages/InterviewPage.tsx(11,1): error TS6133: 'useAuth' is declared but its value is never read.
+src/pages/ProfilePage.tsx(37,50): error TS6133: 'newProfileError' is declared but its value is never read.
+src/pages/ProfilePage.tsx(49,49): error TS6133: 'interviewError' is declared but its value is never read.

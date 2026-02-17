@@ -12,11 +12,10 @@ interface LayoutProps {
   onLoginClick?: () => void;
 }
 
-export const Layout: React.FC<LayoutProps> = ({ children, onDone, showDoneButton = false, showLoginButton = false, onLoginClick }) => {
+export const Layout: React.FC<LayoutProps> = ({ children, showLoginButton = false, onLoginClick }) => {
   const { theme, toggleTheme } = useTheme();
   const { user, signOut } = useAuth();
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const navigate = useNavigate();
 
   const handleSignOut = async () => {
     await signOut();

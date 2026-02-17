@@ -3,7 +3,9 @@
 
 // Get the current hostname (works for both localhost and network IP)
 // Hardcoded to localhost for debugging
-const API_BASE_URL = 'http://localhost:9000';
+// Force 127.0.0.1 if localhost to avoid IPv6 resolution issues on Windows
+const currentHost = window.location.hostname === 'localhost' ? '127.0.0.1' : window.location.hostname;
+const API_BASE_URL = `http://${currentHost}:9000`;
 
 console.log('HireByte API Config (Hardcoded):', {
   apiUrl: API_BASE_URL,

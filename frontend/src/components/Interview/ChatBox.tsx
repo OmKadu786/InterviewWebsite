@@ -17,7 +17,7 @@ interface ChatBoxProps {
   onSpeechFeedback?: (feedback: { wpm: number; pace: string; filler_count: number; confidence_level: string; long_silence: boolean; feedback: string }) => void;
 }
 
-export function ChatBox({ onEnd, onAISpeakingChange, onUserSpeakingChange, onLogicFeedback, onSpeechFeedback }: ChatBoxProps) {
+export function ChatBox({ onAISpeakingChange, onUserSpeakingChange, onLogicFeedback, onSpeechFeedback }: ChatBoxProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState("");
   const [currentAudio, setCurrentAudio] = useState<string | null>(null);

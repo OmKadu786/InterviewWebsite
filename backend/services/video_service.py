@@ -182,11 +182,10 @@ def process_video_frame(base64_image, stabilizer: Stabilizer):
         # Apply CLAHE for better contrast normalization (helps in low-light)
         gray = stabilizer.clahe.apply(gray)
         
-        # 1. Detection - optimized parameters for maximum sensitivity & accuracy
-        # Lower scaleFactor = more detection passes = higher sensitivity
-        # Lower minNeighbors = fewer confirmations needed = catches more faces
-        faces = face_cascade.detectMultiScale(gray, scaleFactor=1.05, minNeighbors=3, minSize=(60, 60))
-        profiles = profile_cascade.detectMultiScale(gray, scaleFactor=1.05, minNeighbors=3, minSize=(50, 50)) if len(faces) == 0 else []
+        # 1. Detection - Ultra-Stable Parameters
+        # High minNeighbors to eliminate almost all false positive flicker
+        faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=7, minSize=(80, 80))
+        profiles = profile_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=6, minSize=(70, 70)) if len(faces) == 0 else []
         
         target_focus = 0.0
         target_emo = 0.0
@@ -200,68 +199,65 @@ def process_video_frame(base64_image, stabilizer: Stabilizer):
             face_roi = (x, y, w, h)
             roi_gray = gray[y:y+h, x:x+w]
             
-            # Eyes detection - stricter parameters
-            # Apply CLAHE to face ROI for better eye detection
+            # Eyes detection - Strict
             roi_gray = stabilizer.clahe.apply(roi_gray)
-            eyes = eye_cascade.detectMultiScale(roi_gray, scaleFactor=1.05, minNeighbors=3, minSize=(15, 15))
+            eyes = eye_cascade.detectMultiScale(roi_gray, scaleFactor=1.1, minNeighbors=6, minSize=(20, 20))
             num_eyes = len(eyes)
             stabilizer.update_eyes_history(num_eyes)
             avg_eyes = stabilizer.get_average_eyes()
             
-            # Focus score based on eye detection
-            # If eyes closed (avg < 1), focus drops significantly
-            if avg_eyes >= 1.8:  # Both eyes consistently visible
-                target_focus = 95.0
-            elif avg_eyes >= 1.0:  # One eye or intermittent
-                target_focus = 70.0
-            elif avg_eyes >= 0.5:  # Blinking or partial
-                target_focus = 45.0
-            else:  # Eyes closed
-                target_focus = 20.0
+            # Focus score based on eye detection - Harder thresholds for "90+" scores
+            if avg_eyes >= 1.95:  # Perfectly steady eye contact
+                target_focus = 98.0
+            elif avg_eyes >= 1.5:  # Good eye contact
+                target_focus = 85.0
+            elif avg_eyes >= 1.0:  # Fair contact
+                target_focus = 60.0
+            elif avg_eyes >= 0.3:  # Frequent blinking or looking away
+                target_focus = 35.0
+            else:  # Eyes closed or looking down
+                target_focus = 10.0
             
-            # Smile detection
-            smiles = smile_cascade.detectMultiScale(roi_gray, scaleFactor=1.3, minNeighbors=12, minSize=(25, 25))
+            # Smile detection - Very Strict
+            smiles = smile_cascade.detectMultiScale(roi_gray, scaleFactor=1.2, minNeighbors=25, minSize=(30, 30))
             if len(smiles) > 0: 
-                target_emo = 85.0
+                target_emo = 90.0
             else: 
-                target_emo = 45.0  # Neutral baseline
+                target_emo = 40.0  # Neutral baseline
             
         elif len(profiles) > 0:
-            target_focus = 25.0  # Looking away
-            target_emo = 20.0
+            target_focus = 20.0  # Profile view = low focus
+            target_emo = 30.0
             (x,y,w,h) = profiles[0]
             face_roi = (x,y,w,h)
             stabilizer.update_eyes_history(0)
         else:
-            target_focus = 10.0  # No face
-            target_emo = 10.0
+            target_focus = 5.0  # No face detected
+            target_emo = 5.0
             stabilizer.update_eyes_history(0)
 
         # 2. Stability Check (Optical Flow)
         stabilizer.check_stability(gray, face_roi)
         
-        # 3. Smooth with faster response for drops
-        stabilizer.internal_focus = stabilizer.smooth(stabilizer.internal_focus, target_focus, alpha=0.25)
-        stabilizer.internal_emotion = stabilizer.smooth(stabilizer.internal_emotion, target_emo, alpha=0.2)
+        # 3. Smooth with tuned response curves - VERY STABLE (Low Alpha)
+        stabilizer.internal_focus = stabilizer.smooth(stabilizer.internal_focus, target_focus, alpha=0.1)
+        stabilizer.internal_emotion = stabilizer.smooth(stabilizer.internal_emotion, target_emo, alpha=0.08)
         
-        # Update Displayed State (Hysteresis applied)
+        # Update Displayed State
         stabilizer.focus_score = stabilizer.get_ui_value(stabilizer.internal_focus, stabilizer.focus_score)
         stabilizer.emotion_score = stabilizer.get_ui_value(stabilizer.internal_emotion, stabilizer.emotion_score)
         
-        # Confidence calculation - DIRECTLY tied to focus (eye detection)
-        # When eyes closed, confidence MUST drop
-        # Focus weight: 70%, Emotion: 20%, Steadiness: 10%
-        steady_bonus = 5 if stabilizer.is_steady else 0
-        conf_target = (stabilizer.focus_score * 0.70) + (stabilizer.emotion_score * 0.20) + steady_bonus
-        conf_target = min(100, max(0, conf_target))  # Clamp to 0-100
+        # Confidence calculation - Higher weight on eye contact (focus)
+        # Focus weight: 75%, Emotion: 15%, Steadiness: 10%
+        steady_bonus = 8 if stabilizer.is_steady else 0
+        conf_target = (stabilizer.focus_score * 0.75) + (stabilizer.emotion_score * 0.15) + steady_bonus
+        conf_target = min(100, max(0, conf_target))
         
-        # Apply smoothing to confidence with fast response for drops
+        # Apply smoothing to confidence - Stable
         if conf_target < stabilizer.confidence_score:
-            # Fast drop when focus/eyes drops
-            stabilizer.confidence_score = stabilizer.confidence_score * 0.7 + conf_target * 0.3
+            stabilizer.confidence_score = stabilizer.confidence_score * 0.8 + conf_target * 0.2
         else:
-            # Slow rise
-            stabilizer.confidence_score = stabilizer.confidence_score * 0.9 + conf_target * 0.1
+            stabilizer.confidence_score = stabilizer.confidence_score * 0.98 + conf_target * 0.02
         
         # Stress - inverse of confidence
         stress = max(5, min(95, 100 - stabilizer.confidence_score))

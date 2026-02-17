@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FileUpload } from '../components/FileUpload';
-import { Loader2, ArrowRight, Brain, Code, Globe } from 'lucide-react';
+import { Loader2, ArrowRight, Brain, Code, Globe, Sparkles } from 'lucide-react';
 import { API_ENDPOINTS } from '../config/api';
 import { ConsentModal } from '../components/ConsentModal';
 
@@ -9,9 +9,9 @@ type InterviewMode = 'resume' | 'topic';
 type TopicOption = 'AI_ML' | 'DSA' | 'WEB_DEV';
 
 const TOPIC_OPTIONS: { key: TopicOption; label: string; icon: React.ReactNode; description: string }[] = [
-    { key: 'AI_ML', label: 'AI / ML', icon: <Brain size={28} />, description: 'Machine Learning, Neural Networks, NLP, Computer Vision' },
-    { key: 'DSA', label: 'DSA', icon: <Code size={28} />, description: 'Arrays, Trees, Graphs, DP, Sorting, Searching' },
-    { key: 'WEB_DEV', label: 'Web Dev', icon: <Globe size={28} />, description: 'HTML/CSS, JavaScript, React, APIs, Full-Stack' },
+    { key: 'AI_ML', label: 'AI / ML', icon: <Brain size={24} />, description: 'Machine Learning, Neural Networks, NLP' },
+    { key: 'DSA', label: 'DSA', icon: <Code size={24} />, description: 'Arrays, Trees, Graphs, DP' },
+    { key: 'WEB_DEV', label: 'Web Dev', icon: <Globe size={24} />, description: 'React, Node.js, System Design' },
 ];
 
 export const SetupPage: React.FC = () => {
@@ -52,7 +52,6 @@ export const SetupPage: React.FC = () => {
         setIsSubmitting(true);
         try {
             if (interviewMode === 'resume') {
-                // Existing resume upload flow
                 const formData = new FormData();
                 formData.append('file', selectedFile!);
                 formData.append('job_description', jobDescription);
@@ -74,7 +73,6 @@ export const SetupPage: React.FC = () => {
                     }
                 });
             } else {
-                // Topic-based interview flow
                 const response = await fetch(API_ENDPOINTS.startTopicInterview, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -103,112 +101,114 @@ export const SetupPage: React.FC = () => {
     };
 
     return (
-        <div className="flex items-center justify-center min-h-[calc(100vh-4rem)] p-4">
-            <div className="w-full max-w-lg bg-card border border-border rounded-2xl p-8 shadow-2xl backdrop-blur-sm">
-                <div className="mb-6 text-center">
-                    <h2 className="text-2xl font-bold mb-2">
-                        <span className="text-hirebyte-mint">HireByte</span> Setup
+        <div className="flex items-center justify-center min-h-[calc(100vh-4rem)] p-4 relative">
+             {/* Ambient Background */}
+             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-emerald-500/5 rounded-full blur-[100px] pointer-events-none" />
+
+            <div className="w-full max-w-lg glass-panel rounded-2xl p-8 relative z-10">
+                <div className="mb-8 text-center">
+                    <h2 className="text-3xl font-bold mb-2 flex items-center justify-center gap-2">
+                        <Sparkles className="text-emerald-500" size={24} />
+                        <span className="text-white">Session Setup</span>
                     </h2>
-                    <p className="text-muted-foreground">Choose your interview mode to get started.</p>
+                    <p className="text-neutral-400 text-sm">Configure your AI interview environment.</p>
                 </div>
 
-                <div className="space-y-6">
+                <div className="space-y-8">
                     {/* Mode Toggle */}
-                    <div className="grid grid-cols-2 gap-2 p-1 bg-secondary/30 rounded-xl">
+                    <div className="grid grid-cols-2 gap-2 p-1 bg-black/40 rounded-xl border border-white/5">
                         <button
                             onClick={() => setInterviewMode('resume')}
-                            className={`py-2.5 px-4 rounded-lg text-sm font-medium transition-all ${interviewMode === 'resume'
-                                ? 'bg-hirebyte-mint text-white shadow-md'
-                                : 'text-muted-foreground hover:text-foreground'
+                            className={`py-3 px-4 rounded-lg text-sm font-bold transition-all ${interviewMode === 'resume'
+                                ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/20'
+                                : 'text-neutral-500 hover:text-neutral-300'
                                 }`}
                         >
-                            📄 Resume Upload
+                            Resume & JD
                         </button>
                         <button
                             onClick={() => setInterviewMode('topic')}
-                            className={`py-2.5 px-4 rounded-lg text-sm font-medium transition-all ${interviewMode === 'topic'
-                                ? 'bg-hirebyte-mint text-white shadow-md'
-                                : 'text-muted-foreground hover:text-foreground'
+                            className={`py-3 px-4 rounded-lg text-sm font-bold transition-all ${interviewMode === 'topic'
+                                ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/20'
+                                : 'text-neutral-500 hover:text-neutral-300'
                                 }`}
                         >
-                            🎯 Topic Practice
+                            Topic Focus
                         </button>
                     </div>
 
                     {/* Resume Mode */}
                     {interviewMode === 'resume' && (
-                        <>
+                        <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
                             <FileUpload onFileSelect={setSelectedFile} selectedFile={selectedFile} />
 
                             <div className="space-y-2">
-                                <label className="text-sm font-medium">Job Description</label>
+                                <label className="text-xs font-bold text-neutral-400 uppercase tracking-wider ml-1">Job Context</label>
                                 <textarea
-                                    className="w-full p-3 bg-secondary/30 border border-input rounded-xl outline-none focus:ring-2 focus:ring-hirebyte-mint/30 min-h-[100px] resize-none"
-                                    placeholder="Paste job requirements..."
+                                    className="input-field w-full min-h-[120px] resize-none"
+                                    placeholder="Paste job description or key requirements here..."
                                     value={jobDescription}
                                     onChange={(e) => setJobDescription(e.target.value)}
                                 />
                             </div>
-                        </>
+                        </div>
                     )}
 
                     {/* Topic Mode */}
                     {interviewMode === 'topic' && (
-                        <div className="space-y-3">
-                            <label className="text-sm font-medium">Select Interview Topic</label>
+                        <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                            <label className="text-xs font-bold text-neutral-400 uppercase tracking-wider ml-1">Target Domain</label>
                             <div className="grid grid-cols-3 gap-3">
                                 {TOPIC_OPTIONS.map((opt) => (
                                     <button
                                         key={opt.key}
                                         onClick={() => setSelectedTopic(opt.key)}
-                                        className={`flex flex-col items-center gap-2 p-4 rounded-xl border text-center transition-all ${selectedTopic === opt.key
-                                            ? 'bg-hirebyte-mint/10 border-hirebyte-mint text-hirebyte-mint shadow-md shadow-hirebyte-mint/10'
-                                            : 'bg-secondary/30 border-border hover:border-hirebyte-mint/50 text-muted-foreground hover:text-foreground'
+                                        className={`glass-button p-4 rounded-xl flex flex-col items-center gap-3 transition-all ${selectedTopic === opt.key
+                                            ? 'border-emerald-500 ring-1 ring-emerald-500 bg-emerald-500/10 text-white'
+                                            : 'text-neutral-400 hover:text-white'
                                             }`}
                                     >
-                                        {opt.icon}
-                                        <span className="text-sm font-semibold">{opt.label}</span>
+                                        <div className={selectedTopic === opt.key ? 'text-emerald-400' : 'text-neutral-500'}>
+                                            {opt.icon}
+                                        </div>
+                                        <span className="text-xs font-bold">{opt.label}</span>
                                     </button>
                                 ))}
                             </div>
                             {selectedTopic && (
-                                <p className="text-xs text-muted-foreground text-center animate-in fade-in">
+                                <p className="text-xs text-emerald-400/80 text-center font-medium bg-emerald-500/5 p-2 rounded-lg border border-emerald-500/10">
                                     {TOPIC_OPTIONS.find(o => o.key === selectedTopic)?.description}
                                 </p>
                             )}
                         </div>
                     )}
 
-                    {/* Difficulty Selector (both modes) */}
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium">Interview Difficulty</label>
-                        <div className="grid grid-cols-3 gap-2">
+                    {/* Difficulty Selector */}
+                    <div className="space-y-3">
+                        <label className="text-xs font-bold text-neutral-400 uppercase tracking-wider ml-1">Intensity Level</label>
+                        <div className="grid grid-cols-3 gap-3">
                             {(['easy', 'medium', 'hard'] as const).map((level) => (
                                 <button
                                     key={level}
                                     onClick={() => setDifficulty(level)}
-                                    className={`py-2 px-4 rounded-xl border text-sm font-medium transition-all ${difficulty === level
-                                        ? 'bg-hirebyte-mint text-white border-hirebyte-mint'
-                                        : 'bg-secondary/30 border-border hover:border-hirebyte-mint/50'
+                                    className={`py-2 px-4 rounded-xl border text-xs font-bold uppercase tracking-wider transition-all ${difficulty === level
+                                        ? 'bg-yellow-500 text-black border-yellow-500 shadow-[0_0_15px_rgba(250,204,21,0.3)]'
+                                        : 'bg-black/30 border-white/10 text-neutral-500 hover:border-white/20'
                                         }`}
                                 >
-                                    {level.charAt(0).toUpperCase() + level.slice(1)}
+                                    {level}
                                 </button>
                             ))}
                         </div>
-                        <p className="text-xs text-muted-foreground">
-                            {difficulty === 'easy' && 'Basic questions, friendly tone'}
-                            {difficulty === 'medium' && 'Standard interview, balanced difficulty'}
-                            {difficulty === 'hard' && 'Challenging questions, rigorous assessment'}
-                        </p>
                     </div>
 
                     <button
                         onClick={handleStartInterviewClick}
                         disabled={!canStart || isSubmitting}
-                        className="w-full py-3 bg-gradient-to-r from-hirebyte-blue to-hirebyte-blue-light text-white font-semibold rounded-xl flex items-center justify-center gap-2 hover:from-hirebyte-mint hover:to-emerald-500 transition-all duration-300 disabled:opacity-50"
+                        className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl flex items-center justify-center gap-2 transition-all 
+                        disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_20px_rgba(16,185,129,0.2)] hover:shadow-[0_0_30px_rgba(16,185,129,0.4)]"
                     >
-                        {isSubmitting ? <Loader2 className="animate-spin" /> : <span>Start Interview <ArrowRight size={18} className="inline ml-1" /></span>}
+                        {isSubmitting ? <Loader2 className="animate-spin" /> : <span>Start Session <ArrowRight size={18} className="inline ml-1" /></span>}
                     </button>
                 </div>
             </div>

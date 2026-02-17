@@ -38,13 +38,13 @@ pycparser==3.0
 pydantic==2.12.5
 pydantic_core==2.41.5
 Pygments==2.19.2
-pyiceberg==0.11.0
+
 PyJWT==2.11.0
 pymongo==4.16.0
 pyparsing==3.3.2
 pypdf==6.7.0
 PyPDF2==3.0.1
-pyroaring==1.0.3
+
 python-dateutil==2.9.0.post0
 python-dotenv==1.2.1
 python-multipart==0.0.22

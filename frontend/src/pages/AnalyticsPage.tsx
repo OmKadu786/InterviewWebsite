@@ -1,13 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { CandidateReport } from '../components/Analytics/CandidateReport';
-import { useAuth } from '../context/AuthContext';
 import { API_ENDPOINTS } from '../config/api';
 import { ArrowLeft } from 'lucide-react';
 
 export const AnalyticsPage: React.FC = () => {
     const navigate = useNavigate();
-    const { user } = useAuth();
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [reportData, setReportData] = useState<any>(null);
     const [loading, setLoading] = useState(true);
