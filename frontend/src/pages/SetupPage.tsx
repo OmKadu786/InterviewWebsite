@@ -101,36 +101,36 @@ export const SetupPage: React.FC = () => {
     };
 
     return (
-        <div className="flex items-center justify-center min-h-[calc(100vh-4rem)] p-4 relative">
+        <div className="flex items-center justify-center min-h-[calc(100vh-4rem)] p-4 relative overflow-hidden bg-void">
              {/* Ambient Background */}
-             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-emerald-500/5 rounded-full blur-[100px] pointer-events-none" />
+             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gold/5 rounded-full blur-[120px] pointer-events-none" />
 
-            <div className="w-full max-w-lg glass-panel rounded-2xl p-8 relative z-10">
-                <div className="mb-8 text-center">
-                    <h2 className="text-3xl font-bold mb-2 flex items-center justify-center gap-2">
-                        <Sparkles className="text-emerald-500" size={24} />
-                        <span className="text-white">Session Setup</span>
+            <div className="w-full max-w-lg glass-panel glow-panel rounded-3xl p-8 relative z-10">
+                <div className="mb-10 text-center">
+                    <h2 className="text-3xl font-display font-bold mb-3 flex items-center justify-center gap-3">
+                        <Sparkles className="text-gold animate-pulse" size={28} />
+                        <span className="text-ivory tracking-tight">Session Setup</span>
                     </h2>
-                    <p className="text-neutral-400 text-sm">Configure your AI interview environment.</p>
+                    <p className="font-body text-[#7A6A53] text-sm">Configure your AI interview environment.</p>
                 </div>
 
                 <div className="space-y-8">
                     {/* Mode Toggle */}
-                    <div className="grid grid-cols-2 gap-2 p-1 bg-black/40 rounded-xl border border-white/5">
+                    <div className="grid grid-cols-2 gap-2 p-1.5 bg-surface/50 rounded-2xl border border-gold/10">
                         <button
                             onClick={() => setInterviewMode('resume')}
-                            className={`py-3 px-4 rounded-lg text-sm font-bold transition-all ${interviewMode === 'resume'
-                                ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/20'
-                                : 'text-neutral-500 hover:text-neutral-300'
+                            className={`py-3 px-4 rounded-xl text-sm font-heading font-bold transition-all duration-300 ${interviewMode === 'resume'
+                                ? 'bg-panel border border-gold/30 text-gold shadow-[0_0_15px_rgba(201,168,76,0.15)]'
+                                : 'text-muted hover:text-[#7A6A53] hover:bg-surface'
                                 }`}
                         >
                             Resume & JD
                         </button>
                         <button
                             onClick={() => setInterviewMode('topic')}
-                            className={`py-3 px-4 rounded-lg text-sm font-bold transition-all ${interviewMode === 'topic'
-                                ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-900/20'
-                                : 'text-neutral-500 hover:text-neutral-300'
+                            className={`py-3 px-4 rounded-xl text-sm font-heading font-bold transition-all duration-300 ${interviewMode === 'topic'
+                                ? 'bg-panel border border-gold/30 text-gold shadow-[0_0_15px_rgba(201,168,76,0.15)]'
+                                : 'text-muted hover:text-[#7A6A53] hover:bg-surface'
                                 }`}
                         >
                             Topic Focus
@@ -142,10 +142,10 @@ export const SetupPage: React.FC = () => {
                         <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
                             <FileUpload onFileSelect={setSelectedFile} selectedFile={selectedFile} />
 
-                            <div className="space-y-2">
-                                <label className="text-xs font-bold text-neutral-400 uppercase tracking-wider ml-1">Job Context</label>
+                            <div className="space-y-3">
+                                <label className="text-xs font-heading font-bold text-[#7A6A53] uppercase tracking-wider ml-2">Job Context</label>
                                 <textarea
-                                    className="input-field w-full min-h-[120px] resize-none"
+                                    className="w-full min-h-[120px] resize-none bg-surface/50 border border-gold/20 rounded-xl p-4 text-sm font-body text-ivory placeholder:text-muted/50 focus:outline-none focus:border-gold focus:shadow-[0_0_15px_rgba(201,168,76,0.2)] transition-all"
                                     placeholder="Paste job description or key requirements here..."
                                     value={jobDescription}
                                     onChange={(e) => setJobDescription(e.target.value)}
@@ -156,27 +156,27 @@ export const SetupPage: React.FC = () => {
 
                     {/* Topic Mode */}
                     {interviewMode === 'topic' && (
-                        <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
-                            <label className="text-xs font-bold text-neutral-400 uppercase tracking-wider ml-1">Target Domain</label>
-                            <div className="grid grid-cols-3 gap-3">
+                        <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-500">
+                            <label className="text-xs font-heading font-bold text-[#7A6A53] uppercase tracking-wider ml-2">Target Domain</label>
+                            <div className="grid grid-cols-3 gap-4">
                                 {TOPIC_OPTIONS.map((opt) => (
                                     <button
                                         key={opt.key}
                                         onClick={() => setSelectedTopic(opt.key)}
-                                        className={`glass-button p-4 rounded-xl flex flex-col items-center gap-3 transition-all ${selectedTopic === opt.key
-                                            ? 'border-emerald-500 ring-1 ring-emerald-500 bg-emerald-500/10 text-white'
-                                            : 'text-neutral-400 hover:text-white'
+                                        className={`glass-panel p-5 rounded-2xl flex flex-col items-center gap-4 transition-all duration-300 ${selectedTopic === opt.key
+                                            ? 'border-gold bg-gold/5 text-ivory shadow-[0_0_20px_rgba(201,168,76,0.2)] scale-105'
+                                            : 'border-gold/10 text-muted hover:text-ivory hover:border-gold/30 hover:-translate-y-1'
                                             }`}
                                     >
-                                        <div className={selectedTopic === opt.key ? 'text-emerald-400' : 'text-neutral-500'}>
+                                        <div className={`transition-colors duration-300 ${selectedTopic === opt.key ? 'text-gold drop-shadow-[0_0_8px_rgba(201,168,76,0.6)]' : 'text-muted/70'}`}>
                                             {opt.icon}
                                         </div>
-                                        <span className="text-xs font-bold">{opt.label}</span>
+                                        <span className="text-xs font-heading font-bold tracking-wide">{opt.label}</span>
                                     </button>
                                 ))}
                             </div>
                             {selectedTopic && (
-                                <p className="text-xs text-emerald-400/80 text-center font-medium bg-emerald-500/5 p-2 rounded-lg border border-emerald-500/10">
+                                <p className="text-sm text-gold text-center font-body bg-gold/5 p-3 rounded-xl border border-gold/20 animate-in fade-in zoom-in-95 duration-300">
                                     {TOPIC_OPTIONS.find(o => o.key === selectedTopic)?.description}
                                 </p>
                             )}
@@ -184,16 +184,16 @@ export const SetupPage: React.FC = () => {
                     )}
 
                     {/* Difficulty Selector */}
-                    <div className="space-y-3">
-                        <label className="text-xs font-bold text-neutral-400 uppercase tracking-wider ml-1">Intensity Level</label>
-                        <div className="grid grid-cols-3 gap-3">
+                    <div className="space-y-4 pt-2">
+                        <label className="text-xs font-heading font-bold text-[#7A6A53] uppercase tracking-wider ml-2">Intensity Level</label>
+                        <div className="grid grid-cols-3 gap-4">
                             {(['easy', 'medium', 'hard'] as const).map((level) => (
                                 <button
                                     key={level}
                                     onClick={() => setDifficulty(level)}
-                                    className={`py-2 px-4 rounded-xl border text-xs font-bold uppercase tracking-wider transition-all ${difficulty === level
-                                        ? 'bg-yellow-500 text-black border-yellow-500 shadow-[0_0_15px_rgba(250,204,21,0.3)]'
-                                        : 'bg-black/30 border-white/10 text-neutral-500 hover:border-white/20'
+                                    className={`py-3 px-4 rounded-full border text-xs font-heading font-bold uppercase tracking-widest transition-all duration-300 ${difficulty === level
+                                        ? 'bg-gold text-void border-gold shadow-[0_0_20px_rgba(201,168,76,0.4)] scale-105'
+                                        : 'bg-surface border-gold/10 text-muted hover:border-gold/30 hover:text-ivory'
                                         }`}
                                 >
                                     {level}
@@ -202,14 +202,23 @@ export const SetupPage: React.FC = () => {
                         </div>
                     </div>
 
-                    <button
-                        onClick={handleStartInterviewClick}
-                        disabled={!canStart || isSubmitting}
-                        className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl flex items-center justify-center gap-2 transition-all 
-                        disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_20px_rgba(16,185,129,0.2)] hover:shadow-[0_0_30px_rgba(16,185,129,0.4)]"
-                    >
-                        {isSubmitting ? <Loader2 className="animate-spin" /> : <span>Start Session <ArrowRight size={18} className="inline ml-1" /></span>}
-                    </button>
+                    <div className="pt-6">
+                        <button
+                            onClick={handleStartInterviewClick}
+                            disabled={!canStart || isSubmitting}
+                            className="w-full relative group glass-button overflow-hidden py-4 rounded-full flex items-center justify-center gap-3 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:shadow-none bg-panel border border-gold/20 hover:border-gold/50 hover:shadow-[0_0_20px_rgba(201,168,76,0.2)]"
+                        >
+                            <div className="absolute inset-0 bg-gold opacity-5 group-hover:opacity-10 transition-opacity" />
+                            {isSubmitting ? (
+                                <Loader2 className="animate-spin text-gold" />
+                            ) : (
+                                <span className="font-heading font-bold text-gold group-hover:text-gold-light group-disabled:text-muted transition-colors flex items-center tracking-widest uppercase relative z-10">
+                                    Initialize Session
+                                    <ArrowRight size={18} className="ml-2 group-hover:translate-x-1 transition-transform" />
+                                </span>
+                            )}
+                        </button>
+                    </div>
                 </div>
             </div>
 

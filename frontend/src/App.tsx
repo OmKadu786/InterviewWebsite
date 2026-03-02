@@ -4,7 +4,13 @@ import { Layout } from './components/Layout/Layout';
 import { LoginModal } from './components/Auth/LoginModal';
 import { BrowserRouter, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import { API_ENDPOINTS } from './config/api';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import Lenis from '@studio-freight/lenis';
+import gsap from 'gsap';
+import { CustomCursor } from './components/Layout/CustomCursor';
+import ParticleField from './components/ParticleField';
+import PageLoader from './components/PageLoader';
+import { AnimationProvider } from './context/AnimationContext';
 
 // Pages
 import { LandingPage } from './pages/LandingPage';
@@ -19,9 +25,37 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const { user } = useAuth();
   const [showLoginModal, setShowLoginModal] = useState(false);
 
+  // Global Page Loader state
+  const [loaded, setLoaded] = useState(false);
+  const [showContent, setShowContent] = useState(false);
+
+  const handleLoaderComplete = () => {
+    setLoaded(true);
+    setTimeout(() => setShowContent(true), 1500);
+  };
+
   // Determine props for Layout based on current path
   const showLoginButton = location.pathname === '/';
   const showDoneButton = location.pathname === '/interview';
+
+  useEffect(() => {
+    // Standard setup from Lenis docs integrated with GSAP ticker
+    const lenis = new Lenis({ 
+      duration: 1.2, 
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)) 
+    });
+    
+    gsap.ticker.add((time) => {
+      lenis.raf(time * 1000);
+    });
+    
+    gsap.ticker.lagSmoothing(0);
+
+    return () => {
+      lenis.destroy();
+      gsap.ticker.remove((time) => lenis.raf(time * 1000));
+    };
+  }, []);
 
   const handleLoginClick = () => {
     setShowLoginModal(true);
@@ -29,14 +63,9 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
 
   const handleEndInterview = async () => {
     try {
-      // 1. Stop camera
-      await fetch(API_ENDPOINTS.stopCamera, {
-        method: 'POST'
-      });
+      await fetch(API_ENDPOINTS.stopCamera, { method: 'POST' });
 
-      // 2. Save session if user is logged in
       if (user) {
-        // Use endpoint to save session
         await fetch(`${API_ENDPOINTS.analytics}/../session/save`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -50,15 +79,26 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
   };
 
   return (
-    <Layout
-      showLoginButton={showLoginButton}
-      showDoneButton={showDoneButton}
-      onLoginClick={handleLoginClick}
-      onDone={handleEndInterview}
-    >
-      {children}
-      <LoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} />
-    </Layout>
+    <AnimationProvider value={{ loaded, showContent }}>
+      <CustomCursor />
+      
+      {!loaded && <PageLoader onComplete={handleLoaderComplete} />}
+      
+      <div style={{ position: 'relative' }}>
+        <ParticleField />
+        <div style={{ position: 'relative', zIndex: 1 }}>
+          <Layout
+            showLoginButton={showLoginButton}
+            showDoneButton={showDoneButton}
+            onLoginClick={handleLoginClick}
+            onDone={handleEndInterview}
+          >
+            {children}
+            <LoginModal isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} />
+          </Layout>
+        </div>
+      </div>
+    </AnimationProvider>
   );
 };
 

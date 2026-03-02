@@ -48,21 +48,21 @@ export const ConsentModal: React.FC<ConsentModalProps> = ({ isOpen, onAgree, onC
                         transition={{ type: 'spring', damping: 25, stiffness: 300 }}
                         className="fixed left-1/2 top-[12%] -translate-x-1/2 z-50 w-full max-w-md"
                     >
-                        <div className="bg-gradient-to-br from-gray-900/95 to-black/95 border border-hirebyte-mint/30 rounded-2xl p-6 shadow-2xl shadow-hirebyte-blue/20 backdrop-blur-xl">
+                        <div className="bg-gradient-to-br from-[#1A1612] to-void border border-gold/30 rounded-2xl p-6 shadow-2xl shadow-gold/10 backdrop-blur-xl">
                             {/* Header */}
                             <div className="flex items-center justify-between mb-6">
                                 <div className="flex items-center gap-3">
-                                    <div className="p-2 rounded-xl bg-hirebyte-mint/20 text-hirebyte-mint">
+                                    <div className="p-2 rounded-xl bg-gold/20 text-gold">
                                         <Shield size={24} />
                                     </div>
                                     <div>
-                                        <h2 className="text-xl font-bold text-white">Before You Begin</h2>
-                                        <p className="text-sm text-gray-400">Privacy & Consent</p>
+                                        <h2 className="text-xl font-display font-bold text-ivory">Before You Begin</h2>
+                                        <p className="text-sm font-heading text-[#7A6A53]">Privacy & Consent</p>
                                     </div>
                                 </div>
                                 <button
                                     onClick={onCancel}
-                                    className="p-2 rounded-lg hover:bg-white/10 transition-colors text-gray-400 hover:text-white"
+                                    className="p-2 rounded-lg hover:bg-surface transition-colors text-muted hover:text-ivory"
                                 >
                                     <X size={20} />
                                 </button>
@@ -70,49 +70,49 @@ export const ConsentModal: React.FC<ConsentModalProps> = ({ isOpen, onAgree, onC
 
                             {/* Consent Items */}
                             <div className="space-y-3 mb-6">
-                                <div className="flex items-start gap-3 p-3 rounded-xl bg-white/5 border border-white/10">
-                                    <div className="p-1.5 rounded-lg bg-blue-500/20 text-blue-400 mt-0.5">
+                                <div className="flex items-start gap-3 p-3 rounded-xl bg-surface/50 border border-gold/10">
+                                    <div className="p-1.5 rounded-lg bg-gold/10 text-gold mt-0.5">
                                         <Camera size={16} />
                                     </div>
                                     <div>
-                                        <p className="text-sm font-medium text-white">Camera Access</p>
-                                        <p className="text-xs text-gray-400">Your camera will be used for video analysis</p>
+                                        <p className="text-sm font-heading font-medium text-ivory">Camera Access</p>
+                                        <p className="text-xs font-body text-[#7A6A53]">Your camera will be used for video analysis</p>
                                     </div>
                                 </div>
 
-                                <div className="flex items-start gap-3 p-3 rounded-xl bg-white/5 border border-white/10">
-                                    <div className="p-1.5 rounded-lg bg-purple-500/20 text-purple-400 mt-0.5">
+                                <div className="flex items-start gap-3 p-3 rounded-xl bg-surface/50 border border-gold/10">
+                                    <div className="p-1.5 rounded-lg bg-gold/10 text-gold mt-0.5">
                                         <Mic size={16} />
                                     </div>
                                     <div>
-                                        <p className="text-sm font-medium text-white">Microphone Access</p>
-                                        <p className="text-xs text-gray-400">Your voice will be recorded for transcription</p>
+                                        <p className="text-sm font-heading font-medium text-ivory">Microphone Access</p>
+                                        <p className="text-xs font-body text-[#7A6A53]">Your voice will be recorded for transcription</p>
                                     </div>
                                 </div>
 
-                                <div className="flex items-start gap-3 p-3 rounded-xl bg-white/5 border border-white/10">
-                                    <div className="p-1.5 rounded-lg bg-hirebyte-mint/20 text-hirebyte-mint mt-0.5">
+                                <div className="flex items-start gap-3 p-3 rounded-xl bg-surface/50 border border-gold/10">
+                                    <div className="p-1.5 rounded-lg bg-gold/10 text-gold mt-0.5">
                                         <Brain size={16} />
                                     </div>
                                     <div>
-                                        <p className="text-sm font-medium text-white">AI Analysis</p>
-                                        <p className="text-xs text-gray-400">AI will analyze your responses and body language</p>
+                                        <p className="text-sm font-heading font-medium text-ivory">AI Analysis</p>
+                                        <p className="text-xs font-body text-[#7A6A53]">AI will analyze your responses and body language</p>
                                     </div>
                                 </div>
 
-                                <div className="flex items-start gap-3 p-3 rounded-xl bg-white/5 border border-white/10">
-                                    <div className="p-1.5 rounded-lg bg-yellow-500/20 text-yellow-400 mt-0.5">
+                                <div className="flex items-start gap-3 p-3 rounded-xl bg-surface/50 border border-gold/10">
+                                    <div className="p-1.5 rounded-lg bg-gold/10 text-gold mt-0.5">
                                         <Eye size={16} />
                                     </div>
                                     <div>
-                                        <p className="text-sm font-medium text-white">Practice Session</p>
-                                        <p className="text-xs text-gray-400">This is for practice purposes only • AI assistance is always visible</p>
+                                        <p className="text-sm font-heading font-medium text-ivory">Practice Session</p>
+                                        <p className="text-xs font-body text-[#7A6A53]">This is for practice purposes only • AI assistance is always visible</p>
                                     </div>
                                 </div>
                             </div>
 
                             {/* Checkbox */}
-                            <label className="flex items-center gap-3 p-4 rounded-xl bg-hirebyte-blue/10 border border-hirebyte-blue/30 cursor-pointer hover:bg-hirebyte-blue/15 transition-colors mb-6 group">
+                            <label className="flex items-center gap-3 p-4 rounded-xl bg-surface border border-gold/20 cursor-pointer hover:border-gold/40 hover:bg-surface/80 transition-colors mb-6 group">
                                 <div className="relative">
                                     <input
                                         type="checkbox"
@@ -122,14 +122,14 @@ export const ConsentModal: React.FC<ConsentModalProps> = ({ isOpen, onAgree, onC
                                     />
                                     <div className={`w-5 h-5 rounded border-2 transition-all flex items-center justify-center ${
                                         isChecked 
-                                            ? 'bg-hirebyte-mint border-hirebyte-mint' 
-                                            : 'border-gray-500 group-hover:border-hirebyte-mint/50'
+                                            ? 'bg-gold border-gold' 
+                                            : 'border-muted group-hover:border-gold/50'
                                     }`}>
                                         {isChecked && (
                                             <motion.svg
                                                 initial={{ scale: 0 }}
                                                 animate={{ scale: 1 }}
-                                                className="w-3 h-3 text-white"
+                                                className="w-3 h-3 text-void"
                                                 fill="none"
                                                 viewBox="0 0 24 24"
                                                 stroke="currentColor"
@@ -140,24 +140,24 @@ export const ConsentModal: React.FC<ConsentModalProps> = ({ isOpen, onAgree, onC
                                         )}
                                     </div>
                                 </div>
-                                <span className="text-sm font-medium text-white">I understand and agree to the above</span>
+                                <span className="text-sm font-heading font-medium text-ivory">I understand and agree to the above</span>
                             </label>
 
                             {/* Action Buttons */}
                             <div className="flex gap-3">
                                 <button
                                     onClick={onCancel}
-                                    className="flex-1 py-3 px-4 rounded-xl border border-white/20 text-gray-300 font-medium hover:bg-white/5 transition-colors"
+                                    className="flex-1 py-3 px-4 rounded-xl border border-gold/20 text-muted font-heading font-medium hover:bg-surface hover:text-ivory transition-colors"
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     onClick={handleAgree}
                                     disabled={!isChecked}
-                                    className={`flex-1 py-3 px-4 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
+                                    className={`flex-1 py-3 px-4 rounded-xl font-heading font-semibold transition-all flex items-center justify-center gap-2 ${
                                         isChecked
-                                            ? 'bg-gradient-to-r from-hirebyte-mint to-emerald-500 text-white hover:from-emerald-500 hover:to-hirebyte-mint shadow-lg shadow-hirebyte-mint/25'
-                                            : 'bg-gray-700 text-gray-400 cursor-not-allowed'
+                                            ? 'bg-gold text-void hover:bg-gold-light shadow-lg shadow-gold/20'
+                                            : 'bg-surface border border-gold/10 text-muted cursor-not-allowed'
                                     }`}
                                 >
                                     <Shield size={16} />
@@ -166,7 +166,7 @@ export const ConsentModal: React.FC<ConsentModalProps> = ({ isOpen, onAgree, onC
                             </div>
 
                             {/* Footer Note */}
-                            <p className="text-xs text-gray-500 text-center mt-4">
+                            <p className="text-xs font-body text-[#7A6A53] text-center mt-4">
                                 Your privacy matters. Data is processed locally for this session.
                             </p>
                         </div>

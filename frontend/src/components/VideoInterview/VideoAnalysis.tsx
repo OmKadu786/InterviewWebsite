@@ -125,8 +125,8 @@ export const VideoAnalysis: React.FC<VideoAnalysisProps> = ({
 
     return (
         <div className="flex flex-col h-full min-h-0 gap-4">
-            {/* Main Video Card */}
-            <div className="relative flex-1 rounded-2xl overflow-hidden bg-black/40 border border-border/30 shadow-2xl backdrop-blur-sm group">
+            {/* Main Video Card - Neon Theme */}
+            <div className="relative flex-1 rounded-2xl overflow-hidden bg-void ring-1 ring-gold/30 shadow-[0_0_20px_rgba(201,168,76,0.1)] group">
                 <Webcam
                     ref={webcamRef}
                     audio={false}
@@ -136,25 +136,25 @@ export const VideoAnalysis: React.FC<VideoAnalysisProps> = ({
                         height: 720,
                         facingMode: "user"
                     }}
-                    className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity"
+                    className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
                     mirrored={true}
                 />
 
                 {/* Left: LIVE indicator */}
                 <div className="absolute top-4 left-4">
-                    <div className={`backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 flex items-center gap-2 text-xs font-medium ${isConnected ? 'bg-black/60 text-emerald-400' : 'bg-red-900/60 text-red-400'}`}>
+                    <div className={`backdrop-blur-md bg-panel/80 glass-panel px-3 py-1.5 rounded flex items-center gap-2 font-heading text-xs font-bold tracking-widest ${isConnected ? 'text-status-red' : 'text-muted'}`}>
                         <span className="relative flex h-2 w-2">
-                            <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${isConnected ? 'bg-emerald-400' : 'bg-red-400'} opacity-75`}></span>
-                            <span className={`relative inline-flex rounded-full h-2 w-2 ${isConnected ? 'bg-emerald-500' : 'bg-red-500'}`}></span>
+                            <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${isConnected ? 'bg-status-red' : 'bg-surface'} opacity-75`}></span>
+                            <span className={`relative inline-flex rounded-full h-2 w-2 ${isConnected ? 'bg-status-red' : 'bg-surface'}`}></span>
                         </span>
-                        {isConnected ? 'LIVE' : 'CONNECTING'}
+                        [{isConnected ? 'LIVE' : 'WAIT'}]
                     </div>
                 </div>
 
                 {/* Right: AI Badge + Timestamp */}
                 <div className="absolute top-4 right-4 flex items-center gap-3">
                     <AIAssistanceBadge isConnected={isConnected} />
-                    <div className="bg-emerald-600 backdrop-blur-md px-4 py-2 rounded-full flex items-center gap-2 text-sm font-bold text-white font-mono shadow-lg">
+                    <div className="bg-panel border border-gold/20 backdrop-blur-md px-3 py-1 rounded text-gold font-heading text-sm tracking-widest">
                         {formatTime(elapsed)}
                     </div>
                 </div>
@@ -169,36 +169,36 @@ export const VideoAnalysis: React.FC<VideoAnalysisProps> = ({
                         className="absolute bottom-6 left-1/2 -translate-x-1/2 w-auto min-w-[300px] max-w-md z-20"
                     >
                         {isAISpeaking ? (
-                            <div className="bg-card/70 backdrop-blur-xl rounded-2xl px-6 py-4 shadow-[0_8px_32px_rgba(0,0,0,0.4)] flex items-center gap-4 border border-purple-500/30">
-                                <div className="p-2 bg-purple-500/20 rounded-lg text-purple-400 animate-pulse">
+                            <div className="bg-panel/80 glass-panel rounded-xl px-5 py-3 shadow-[0_0_20px_rgba(201,168,76,0.2)] flex items-center gap-4 border border-gold/30">
+                                <div className="p-2 bg-gold/10 rounded-lg text-gold animate-pulse">
                                     <Activity size={20} />
                                 </div>
                                 <div className="flex flex-col flex-1">
-                                    <p className="text-sm font-bold text-white tracking-wide uppercase">AI Speaking</p>
-                                    <p className="text-xs text-purple-300/80">Listening carefully - Prepare your response</p>
+                                    <p className="font-heading text-sm font-bold text-ivory tracking-widest uppercase">AI Speaking</p>
+                                    <p className="font-body text-xs text-[#7A6A53]">Analyzing current trajectory...</p>
                                 </div>
                             </div>
                         ) : isUserSpeaking ? (
-                            <div className="bg-card/70 backdrop-blur-xl rounded-2xl px-6 py-4 shadow-[0_8px_32px_rgba(0,0,0,0.4)] flex items-center gap-4 border border-emerald-500/30">
-                                <div className="p-2 bg-emerald-500/20 rounded-lg text-emerald-400">
+                            <div className="bg-surface/80 glass-panel rounded-xl px-5 py-3 shadow-[0_0_20px_rgba(201,168,76,0.2)] flex items-center gap-4 border border-gold/40">
+                                <div className="p-2 bg-gold/20 rounded-lg text-gold">
                                     <Hand size={20} />
                                 </div>
                                 <div className="flex flex-col flex-1">
-                                    <p className="text-sm font-bold text-white tracking-wide uppercase">Analysising Response</p>
-                                    <p className="text-xs text-emerald-300/80">Maintain steady eye contact & clear articulation</p>
+                                    <p className="font-heading text-sm font-bold text-ivory tracking-widest uppercase">Sensors Active</p>
+                                    <p className="font-body text-xs text-[#7A6A53]">Maintaining steady input stream.</p>
                                 </div>
                             </div>
                         ) : (
-                            <div className="bg-card/70 backdrop-blur-xl rounded-2xl px-6 py-4 shadow-[0_8px_32px_rgba(0,0,0,0.4)] flex items-center gap-4 border border-blue-500/30">
-                                <div className="p-2 bg-blue-500/20 rounded-lg text-blue-400">
+                            <div className="bg-panel/80 glass-panel rounded-xl px-5 py-3 shadow-[0_0_20px_rgba(201,168,76,0.1)] flex items-center gap-4 border border-gold/20">
+                                <div className="p-2 bg-gold/5 rounded-lg text-gold">
                                     <Sparkles size={20} />
                                 </div>
                                 <div className="flex flex-col flex-1">
-                                    <p className="text-base font-bold text-white tracking-wide">
-                                        {currentHint ? "💡 Suggestion Tip" : "✨ Your Turn"}
+                                    <p className="font-heading text-base font-bold text-ivory tracking-widest">
+                                        {currentHint ? "SYS.OVERRIDE" : "AWAITING INPUT"}
                                     </p>
-                                    <p className="text-xs text-blue-300/90 leading-snug font-medium">
-                                        {currentHint || "Turn on mic and speak confidently - Share your relevant experience"}
+                                    <p className="font-body text-xs text-[#7A6A53] leading-snug">
+                                        {currentHint || "Mic is primed. Send audio response when ready."}
                                     </p>
                                 </div>
                             </div>
@@ -213,22 +213,22 @@ export const VideoAnalysis: React.FC<VideoAnalysisProps> = ({
                     label="Emotion"
                     value={smoothedMetrics.emotion}
                     icon={<Smile size={14} />}
-                    color="text-yellow-400"
-                    barColor="bg-yellow-400"
+                    color="text-gold"
+                    barColor="bg-gold"
                 />
                 <MetricCard
                     label="Focus"
                     value={smoothedMetrics.focus}
                     icon={<Activity size={14} />}
-                    color="text-blue-400"
-                    barColor="bg-blue-400"
+                    color="text-ivory"
+                    barColor="bg-ivory"
                 />
                 <MetricCard
                     label="Confidence"
                     value={smoothedMetrics.confidence}
                     icon={<Brain size={14} />}
-                    color="text-purple-400"
-                    barColor="bg-purple-400"
+                    color="text-[#7A6A53]"
+                    barColor="bg-[#7A6A53]"
                 />
             </div>
         </div>
@@ -244,12 +244,12 @@ interface MetricCardProps {
 }
 
 const MetricCard = ({ label, value, icon, color, barColor }: MetricCardProps) => (
-    <div className="bg-card/50 border border-border/50 rounded-xl p-3 flex flex-col gap-2 backdrop-blur-sm">
-        <div className="flex items-center justify-between text-xs text-muted-foreground font-medium">
-            <span className="flex items-center gap-1.5">{icon} {label}</span>
+    <div className="glass-panel glow-panel rounded-xl p-3 flex flex-col gap-2">
+        <div className="flex items-center justify-between font-heading text-xs text-muted font-bold tracking-widest uppercase">
+            <span className="flex items-center gap-2">{icon} {label}</span>
             <span className={color}>{value}%</span>
         </div>
-        <div className="h-2 bg-secondary/50 rounded-full overflow-hidden">
+        <div className="h-1.5 bg-surface/80 rounded-full overflow-hidden">
             <motion.div
                 initial={{ width: 0 }}
                 animate={{ width: `${value}%` }}

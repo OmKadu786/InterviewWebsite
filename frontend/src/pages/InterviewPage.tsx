@@ -101,40 +101,40 @@ export const InterviewPage: React.FC = () => {
     };
 
     return (
-        <div className="h-[calc(100vh-4rem)] p-2 overflow-hidden relative">
+        <div className="h-[calc(100vh-4rem)] p-2 overflow-hidden relative bg-void">
             <Group id="interview-layout-v4" orientation="horizontal" className="max-w-[1920px] mx-auto h-full">
 
                 {/* Left Panel: Context & Inputs */}
                 <Panel id="left-panel" defaultSize="25" minSize="20" maxSize="40" className="mr-2">
-                    <div className="h-full flex flex-col gap-4 bg-card/30 border border-border/50 rounded-2xl p-4 overflow-y-auto backdrop-blur-sm">
+                    <div className="h-full flex flex-col gap-4 glass-panel glow-panel rounded-2xl p-4 overflow-y-auto relative z-10 border-gold/20">
                         <div className="mb-4">
-                            <h3 className="font-semibold text-lg flex items-center gap-2 mb-1">
-                                <Sparkles size={16} className="text-hirebyte-mint" />
-                                Interview Setup
+                            <h3 className="font-display font-bold text-lg flex items-center gap-2 mb-1 text-ivory">
+                                <Sparkles size={18} className="text-gold animate-pulse" />
+                                Session Telemetry
                             </h3>
-                            <p className="text-xs text-muted-foreground">Resume & Job Analysis</p>
+                            <p className="font-heading text-xs tracking-widest uppercase text-muted">Context & Parameters</p>
                         </div>
 
-                        <div className="p-3 bg-secondary/50 rounded-xl text-sm border border-border/50">
-                            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-2">Resume</span>
-                            <div className="flex items-center gap-2">
-                                <div className="w-8 h-8 rounded bg-red-500/20 text-red-500 flex items-center justify-center text-xs font-bold">PDF</div>
-                                <span className="truncate flex-1">{selectedFile?.name || "resume.pdf"}</span>
+                        <div className="p-4 bg-surface/50 rounded-xl text-sm border border-gold/10">
+                            <span className="font-heading text-xs font-bold text-muted uppercase tracking-widest block mb-2">Resume Context</span>
+                            <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded bg-status-red/10 text-status-red flex items-center justify-center font-heading text-xs font-bold tracking-widest border border-status-red/20">PDF</div>
+                                <span className="truncate flex-1 font-body text-ivory text-sm">{selectedFile?.name || "No Resume active."}</span>
                             </div>
                         </div>
 
-                        <div className="p-3 bg-secondary/50 rounded-xl text-sm border border-border/50 flex-1 overflow-hidden flex flex-col">
-                            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider block mb-2">Job Description</span>
-                            <p className="text-muted-foreground text-xs leading-relaxed overflow-y-auto whitespace-pre-wrap flex-1">
-                                {jobDescription || "No description provided."}
+                        <div className="p-4 bg-surface/50 rounded-xl text-sm border border-gold/10 flex-1 overflow-hidden flex flex-col">
+                            <span className="font-heading text-xs font-bold text-muted uppercase tracking-widest block mb-2">Target Profile</span>
+                            <p className="font-body text-[#7A6A53] text-xs leading-relaxed overflow-y-auto whitespace-pre-wrap flex-1 scroll-smooth">
+                                {jobDescription || "No target profile provided."}
                             </p>
                         </div>
 
                         {/* Hints Section */}
                         <div className="mt-auto space-y-4">
                             <div className="flex items-center gap-2 mb-2">
-                                <Lightbulb size={14} className="text-yellow-400" />
-                                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">AI Hints</span>
+                                <Lightbulb size={16} className="text-gold animate-pulse" />
+                                <span className="font-heading text-xs font-bold text-gold uppercase tracking-widest">Co-Pilot Link</span>
                             </div>
                             <HintLevelButtons
                                 onRequestHint={handleHintRequest}
@@ -144,16 +144,17 @@ export const InterviewPage: React.FC = () => {
                             />
                             <button
                                 onClick={handleEndInterview}
-                                className="w-full py-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 rounded-lg text-sm font-medium transition-colors"
+                                className="w-full py-3 mt-4 group relative overflow-hidden glass-button bg-status-red/10 hover:bg-status-red/20 text-status-red border border-status-red/30 rounded-full font-heading font-bold tracking-widest transition-all"
                             >
-                                End Interview
+                                <span className="relative z-10 group-hover:text-white transition-colors">TERMINATE SESSION</span>
+                                <div className="absolute inset-0 bg-status-red opacity-0 group-hover:opacity-20 transition-opacity" />
                             </button>
                         </div>
                     </div>
                 </Panel>
 
-                <Separator className="w-2 mx-1 rounded-full bg-border/20 hover:bg-hirebyte-mint/50 transition-colors cursor-col-resize flex flex-col justify-center items-center gap-1">
-                    <div className="w-1 h-8 bg-muted-foreground/20 rounded-full" />
+                <Separator className="w-2 mx-1 rounded-full bg-gold/10 hover:bg-gold/40 transition-colors shadow-[0_0_10px_rgba(201,168,76,0.1)] cursor-col-resize flex flex-col justify-center items-center gap-1 group">
+                    <div className="w-1 h-8 bg-gold/30 group-hover:bg-gold rounded-full transition-colors shadow-[0_0_10px_rgba(201,168,76,0.5)]" />
                 </Separator>
 
                 {/* Center Panel: Video Stream */}
@@ -167,8 +168,8 @@ export const InterviewPage: React.FC = () => {
                     </div>
                 </Panel>
 
-                <Separator className="w-2 mx-1 rounded-full bg-border/20 hover:bg-hirebyte-mint/50 transition-colors cursor-col-resize flex flex-col justify-center items-center gap-1">
-                    <div className="w-1 h-8 bg-muted-foreground/20 rounded-full" />
+                <Separator className="w-2 mx-1 rounded-full bg-gold/10 hover:bg-gold/40 transition-colors shadow-[0_0_10px_rgba(201,168,76,0.1)] cursor-col-resize flex flex-col justify-center items-center gap-1 group">
+                    <div className="w-1 h-8 bg-gold/30 group-hover:bg-gold rounded-full transition-colors shadow-[0_0_10px_rgba(201,168,76,0.5)]" />
                 </Separator>
 
                 {/* Right Panel: Chat + Real-time Feedback */}

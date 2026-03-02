@@ -31,31 +31,31 @@ export function FileUpload({ onFileSelect, selectedFile }: FileUploadProps) {
           onClick={() => fileInputRef.current?.click()}
           className={`relative border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-300 group ${
             isDragging 
-                ? 'border-emerald-500 bg-emerald-500/10 shadow-[0_0_20px_rgba(16,185,129,0.2)]' 
-                : 'border-white/10 bg-white/5 hover:border-emerald-500/30 hover:bg-emerald-500/5'
+                ? 'border-gold bg-gold/5 shadow-[0_0_20px_rgba(201,168,76,0.2)]' 
+                : 'border-gold/30 bg-surface/50 hover:border-gold/80 hover:bg-gold/5'
           }`}
         >
           <input ref={fileInputRef} type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => onFileSelect(e.target.files?.[0] || null)} className="hidden" />
-          <div className={`w-12 h-12 mx-auto mb-4 rounded-full flex items-center justify-center transition-all ${isDragging ? 'bg-emerald-500/20 text-emerald-400' : 'bg-white/5 text-neutral-400 group-hover:text-emerald-500 group-hover:bg-emerald-500/10'}`}>
-            <Upload size={24} />
+          <div className={`w-14 h-14 mx-auto mb-4 rounded-full flex items-center justify-center transition-all duration-300 ${isDragging ? 'bg-gold/20 text-gold drop-shadow-[0_0_8px_rgba(201,168,76,0.6)]' : 'bg-surface text-muted group-hover:text-gold group-hover:bg-gold/10 group-hover:shadow-[0_0_15px_rgba(201,168,76,0.3)]'}`}>
+            <Upload size={28} />
           </div>
-          <p className="text-white font-medium mb-1 group-hover:text-emerald-400 transition-colors">Drop resume or click to browse</p>
-          <p className="text-xs text-neutral-500">Supported: PDF, JPG, PNG</p>
+          <p className="font-heading text-sm text-ivory font-bold tracking-wide mb-2 group-hover:text-gold transition-colors">Drop resume or click to browse</p>
+          <p className="font-heading text-xs text-[#7A6A53] uppercase tracking-widest">Supported: PDF, JPG, PNG</p>
         </div>
       ) : (
-        <div className="flex items-center justify-between p-4 glass-card group hover:border-emerald-500/30">
+        <div className="flex items-center justify-between p-4 glass-panel glow-panel rounded-xl group transition-all duration-300">
           <div className="flex items-center space-x-4">
-            <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-500">
+            <div className="p-3 rounded-xl bg-gold/10 text-gold shadow-[0_0_10px_rgba(201,168,76,0.2)]">
                 <FileText size={24} />
             </div>
             <div>
-              <p className="text-white font-medium text-sm">{selectedFile.name}</p>
-              <p className="text-xs text-neutral-500">{(selectedFile.size / 1024).toFixed(2)} KB</p>
+              <p className="font-heading text-sm font-bold tracking-wide text-ivory">{selectedFile.name}</p>
+              <p className="font-heading text-xs text-[#7A6A53] tracking-widest uppercase mt-1">{(selectedFile.size / 1024).toFixed(2)} KB</p>
             </div>
           </div>
           <button 
             onClick={(e) => { e.stopPropagation(); onFileSelect(null); }} 
-            className="p-2 hover:bg-white/10 rounded-lg transition-colors text-neutral-400 hover:text-white"
+            className="p-2 hover:bg-status-red/10 rounded-lg transition-colors text-muted hover:text-status-red border border-transparent hover:border-status-red/30"
           >
             <X size={18} />
           </button>

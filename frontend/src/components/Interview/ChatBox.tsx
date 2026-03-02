@@ -161,16 +161,16 @@ export function ChatBox({ onAISpeakingChange, onUserSpeakingChange, onLogicFeedb
   };
 
   return (
-    <div className="flex flex-col h-full min-h-0 w-full bg-card/30 backdrop-blur-md rounded-2xl border border-border/50 overflow-hidden shadow-lg">
+    <div className="flex flex-col h-full min-h-0 w-full glass-panel glow-panel rounded-2xl overflow-hidden shadow-lg border-gold/20">
       {/* Header */}
-      <div className="shrink-0 p-4 border-b border-border/50 flex justify-between items-center bg-card/60 backdrop-blur-md">
+      <div className="shrink-0 p-4 border-b border-gold/10 flex justify-between items-center bg-panel/70 backdrop-blur-md">
         <div className="flex items-center space-x-3">
-          <div className={`w-2.5 h-2.5 rounded-full ${isConnected ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
-          <span className="font-semibold text-sm">Live Transcript</span>
+          <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-gold animate-pulse drop-shadow-[0_0_8px_rgba(201,168,76,0.6)]' : 'bg-status-red'}`} />
+          <span className="font-heading font-bold tracking-widest uppercase text-ivory text-sm">Live Transcript</span>
         </div>
-        <div className="flex items-center gap-2 px-2 py-1 bg-secondary/50 rounded-full">
-          <span className="text-xs text-muted-foreground">LLM:</span>
-          <span className="text-xs font-medium text-hirebyte-mint">GPT-4o mini</span>
+        <div className="flex items-center gap-2 px-3 py-1 bg-gold/5 border border-gold/20 rounded-full">
+          <span className="font-heading text-xs text-muted tracking-widest uppercase">LLM:</span>
+          <span className="font-heading text-xs font-bold text-gold tracking-widest">GPT-4o</span>
         </div>
       </div>
 
@@ -179,7 +179,7 @@ export function ChatBox({ onAISpeakingChange, onUserSpeakingChange, onLogicFeedb
         <div className="flex-1 flex flex-col min-w-0 min-h-0">
           <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 scroll-smooth chat-scroll">
             {messages.length === 0 && (
-              <div className="flex items-center justify-center h-full opacity-30 text-center text-sm">
+              <div className="flex items-center justify-center h-full opacity-30 text-center text-sm font-body text-ivory">
                 AI conversation will appear here...
               </div>
             )}
@@ -207,9 +207,9 @@ export function ChatBox({ onAISpeakingChange, onUserSpeakingChange, onLogicFeedb
                   }}
                   className={`flex ${m.role === 'ai' ? 'justify-start' : 'justify-end'}`}
                 >
-                  <div className={`p-3 rounded-2xl text-sm max-w-[90%] leading-relaxed ${m.role === 'ai'
-                    ? 'bg-secondary text-secondary-foreground rounded-tl-none'
-                    : 'bg-primary text-primary-foreground rounded-tr-none shadow-md'
+                  <div className={`p-4 rounded-2xl text-sm max-w-[90%] font-body leading-relaxed border ${m.role === 'ai'
+                    ? 'bg-panel/90 text-gold border-gold/20 rounded-tl-none shadow-[0_0_15px_rgba(201,168,76,0.1)]'
+                    : 'bg-surface text-ivory border-gold/10 rounded-tr-none shadow-md'
                     }`}>
                     {m.text}
                   </div>
@@ -218,24 +218,24 @@ export function ChatBox({ onAISpeakingChange, onUserSpeakingChange, onLogicFeedb
             </AnimatePresence>
             {isTranscribing && (
               <div className="flex justify-end">
-                <div className="text-xs text-muted-foreground animate-pulse bg-secondary/50 px-3 py-1 rounded-full flex items-center gap-2">
-                  Transcribing...
+                <div className="font-heading text-xs text-gold animate-pulse bg-gold/10 border border-gold/20 px-4 py-1.5 rounded-full flex items-center gap-2 tracking-widest uppercase">
+                  Processing Audio...
                 </div>
               </div>
             )}
           </div>
 
           {/* Input Area */}
-          <div className="shrink-0 p-3 bg-card/40 border-t border-border/50 flex items-center gap-3 backdrop-blur-md">
+          <div className="shrink-0 p-4 bg-panel/70 border-t border-gold/10 flex items-center gap-3 backdrop-blur-md">
             <button
               onClick={toggleRecording}
               disabled={isTranscribing || !mediaStream}
-              className={`flex items-center justify-center w-10 h-10 rounded-full transition-all duration-200 ${!isRecording
-                ? 'bg-secondary hover:bg-secondary/80 text-destructive'
-                : 'bg-red-500 text-white animate-pulse shadow-lg shadow-red-500/30'
+              className={`flex items-center justify-center w-12 h-12 rounded-full transition-all duration-300 ${!isRecording
+                ? 'bg-gold/10 hover:bg-gold/20 text-gold border border-gold/30 hover:shadow-[0_0_15px_rgba(201,168,76,0.3)]'
+                : 'bg-status-red text-void animate-[pulse_1s_ease-in-out_infinite] shadow-[0_0_20px_rgba(239,68,68,0.5)] border border-status-red/50'
                 } ${(!mediaStream || isTranscribing) ? 'opacity-50 cursor-not-allowed grayscale' : ''}`}
             >
-              {!isRecording ? <MicOff size={18} /> : <Mic size={18} />}
+              {!isRecording ? <MicOff size={20} /> : <Mic size={20} />}
             </button>
 
             <input
@@ -243,16 +243,16 @@ export function ChatBox({ onAISpeakingChange, onUserSpeakingChange, onLogicFeedb
               onChange={e => setInputText(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleSend()}
               disabled={isRecording}
-              className="flex-1 bg-background/50 border border-input rounded-full px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/20 transition-all placeholder:text-muted-foreground disabled:opacity-50"
-              placeholder={isRecording ? "Listening..." : "Type a message..."}
+              className="flex-1 bg-surface/80 border border-gold/10 rounded-full px-5 py-3 text-sm font-body text-ivory outline-none focus:border-gold focus:shadow-[0_0_15px_rgba(201,168,76,0.2)] transition-all placeholder:text-muted/60 disabled:opacity-50"
+              placeholder={isRecording ? "Transmitting audio signal..." : "Input terminal command..."}
             />
 
             <button
               onClick={handleSend}
               disabled={!inputText.trim() || isRecording}
-              className="p-2.5 bg-primary hover:bg-primary/90 text-primary-foreground disabled:opacity-50 disabled:cursor-not-allowed rounded-full transition-colors shadow-md shadow-primary/20"
+              className="w-12 h-12 flex items-center justify-center bg-gold hover:bg-gold-light text-void disabled:opacity-50 disabled:cursor-not-allowed rounded-full transition-all shadow-[0_0_15px_rgba(201,168,76,0.3)] hover:shadow-[0_0_20px_rgba(201,168,76,0.5)]"
             >
-              <Send size={18} />
+              <Send size={20} className={inputText.trim() && !isRecording ? "translate-x-0.5" : ""} />
             </button>
           </div>
         </div>

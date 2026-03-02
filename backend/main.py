@@ -7,11 +7,12 @@ from config.database import init_db, close_db
 # from services.interview_services import InterviewService # Removed per user request
 from models.interview_schema import InterviewReport
 from services.pdf_service import extract_text_from_pdf, generate_interview_pdf
-from services.llm_service import get_ai_response, get_hint, evaluate_answer
+from services.llm_service import get_ai_response, get_hint, evaluate_answer, generate_interview_feedback, generate_study_roadmap
 from services.tts_service import generate_audio
 from services.video_service import process_video_frame, Stabilizer
 from services.resume_analyzer import analyze_resume, build_compact_summary
 from services.interview_planner import generate_interview_plan, generate_topic_plan
+from services.tts_service import generate_audio as generate_tts_audio # Rename to avoid conflict if needed
 from services.interview_state import InterviewState
 from services.report_generator import generate_report
 from services.logic_validator import validate_logic
@@ -576,7 +577,7 @@ def get_most_common_emotion(interviews: List[Dict]) -> str:
         return "neutral"
     return max(set(emotions), key=emotions.count)
 
-def generate_analytics_response(metrics, transcript, scores_summary=None):
+async def generate_analytics_response(metrics, transcript, scores_summary=None, candidate_summary="", job_description=""):
     """Helper to generate analytics response structure from raw data"""
     # Calculate averages from video metrics
     if metrics:
@@ -648,6 +649,7 @@ def generate_analytics_response(metrics, transcript, scores_summary=None):
         communication_score = min(100, avg_emotion + 20)
     
     return {
+        "feedback": await generate_interview_feedback(transcript, scores_summary, candidate_summary, job_description),
         "radar_chart_data": {
             "technical_accuracy": technical_accuracy,
             "communication": communication_score,
@@ -677,14 +679,29 @@ def generate_analytics_response(metrics, transcript, scores_summary=None):
 @app.get("/api/analytics")
 async def get_analytics():
     """Returns analytics for current active session"""
-    state = session_data.get("interview_state")
-    scores_summary = state.get_scores_summary() if state else None
-    
-    return generate_analytics_response(
-        session_data["video_metrics"],
-        session_data["transcript"],
-        scores_summary
-    )
+    try:
+        state = session_data.get("interview_state")
+        scores_summary = state.get_scores_summary() if state else None
+        
+        return await generate_analytics_response(
+            session_data.get("video_metrics", []),
+            session_data.get("transcript", []),
+            scores_summary,
+            session_data.get("candidate_summary", ""),
+            session_data.get("job_description", "")
+        )
+    except Exception as e:
+        print(f"Analytics Generation Error: {e}")
+        traceback.print_exc()
+        # Return a safe empty structure so the frontend doesn't show "Start New Interview" contextless page
+        return {
+            "feedback": {"strengths": "N/A", "gaps": "N/A", "advice": "No data available."},
+            "radar_chart_data": {"technical_accuracy": 0, "communication": 0, "confidence": 0, "focus": 0, "emotional_intelligence": 0},
+            "vision_analytics": {"overall_eye_contact_percentage": 0, "overall_steadiness_percentage": 0, "per_question_metrics": []},
+            "nlp_report": {"total_filler_count": 0, "filler_rate": 0, "talk_to_listen_ratio": 0, "most_common_fillers": [], "sentiment_trend": []},
+            "scoring_summary": {"average_score": 0, "scores_over_time": []},
+            "answer_evaluation": None
+        }
 
 @app.get("/api/interview/{interview_id}/analytics")
 async def get_historical_analytics(interview_id: str):
@@ -808,6 +825,35 @@ def generate_analytics_response(metrics, transcript, scores_summary=None):
         },
         "answer_evaluation": scores_summary
     }
+
+
+class RoadmapRequest(BaseModel):
+    focus_area: str
+    weak_topics: list = []
+
+@app.post("/api/roadmap")
+async def get_roadmap(request: RoadmapRequest):
+    """Generate a 7-day study roadmap based on weak areas."""
+    roadmap = await generate_study_roadmap(request.focus_area, request.weak_topics)
+    return roadmap
+
+class AudioBriefRequest(BaseModel):
+    text: str
+
+@app.post("/api/audio-brief")
+async def get_audio_brief(request: AudioBriefRequest):
+    """Generate audio briefing from text."""
+    if not request.text:
+        raise HTTPException(status_code=400, detail="Text is required")
+        
+    audio_bytes = generate_tts_audio(request.text)
+    if not audio_bytes:
+        raise HTTPException(status_code=500, detail="Audio generation failed")
+    
+    # Return as base64 for easy frontend playback
+    audio_b64 = base64.b64encode(audio_bytes).decode('utf-8')
+    return {"audio_base64": audio_b64}
+
 
 @app.get("/api/analytics")
 async def get_analytics():

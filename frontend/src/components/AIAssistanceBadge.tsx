@@ -19,22 +19,22 @@ export const AIAssistanceBadge: React.FC<AIAssistanceBadgeProps> = ({ isConnecte
             <motion.div
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
-                className={`backdrop-blur-md px-3 py-1.5 rounded-full border flex items-center gap-2 text-xs font-semibold cursor-help transition-all ${
+                className={`backdrop-blur-md px-3 py-1.5 rounded border flex items-center gap-2 text-xs font-heading font-bold tracking-wide cursor-help transition-all ${
                     isConnected
-                        ? 'bg-black/60 border-hirebyte-mint/50 text-hirebyte-mint shadow-lg shadow-hirebyte-mint/20'
-                        : 'bg-black/60 border-yellow-500/50 text-yellow-400'
+                        ? 'bg-gold/10 border-gold/20 text-gold animate-pulse'
+                        : 'bg-surface/60 border-status-red/30 text-status-red'
                 }`}
             >
                 {/* Pulsing Dot */}
                 <span className="relative flex h-2 w-2">
                     <span 
                         className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
-                            isConnected ? 'bg-hirebyte-mint' : 'bg-yellow-400'
+                            isConnected ? 'bg-gold' : 'bg-status-red'
                         }`}
                     />
                     <span 
                         className={`relative inline-flex rounded-full h-2 w-2 ${
-                            isConnected ? 'bg-hirebyte-mint' : 'bg-yellow-500'
+                            isConnected ? 'bg-gold' : 'bg-status-red'
                         }`}
                     />
                 </span>
@@ -43,7 +43,7 @@ export const AIAssistanceBadge: React.FC<AIAssistanceBadgeProps> = ({ isConnecte
                 <Brain size={14} />
 
                 {/* Text */}
-                <span className="uppercase tracking-wide">{isConnected ? 'AI System ON' : 'AI System OFF'}</span>
+                <span className="uppercase">{isConnected ? 'System Active' : 'System Offline'}</span>
             </motion.div>
 
             {/* Tooltip */}
@@ -55,18 +55,18 @@ export const AIAssistanceBadge: React.FC<AIAssistanceBadgeProps> = ({ isConnecte
                         exit={{ opacity: 0, y: 5 }}
                         className="absolute top-full right-0 mt-2 z-50"
                     >
-                        <div className="bg-gray-900/95 border border-white/20 rounded-xl p-3 shadow-xl backdrop-blur-md min-w-[220px]">
+                        <div className="bg-panel border border-gold/20 rounded-xl p-3 shadow-[0_0_20px_rgba(201,168,76,0.1)] backdrop-blur-md min-w-[220px]">
                             <div className="flex items-start gap-2">
-                                <div className={`p-1.5 rounded-lg ${isConnected ? 'bg-hirebyte-mint/20 text-hirebyte-mint' : 'bg-yellow-500/20 text-yellow-400'}`}>
+                                <div className={`p-1.5 rounded-lg ${isConnected ? 'bg-gold/10 text-gold' : 'bg-status-red/10 text-status-red'}`}>
                                     <Brain size={14} />
                                 </div>
                                 <div>
-                                    <p className="text-sm font-medium text-white mb-1">
-                                        {isConnected ? 'AI is Active' : 'AI Connecting...'}
+                                    <p className="font-heading text-sm font-bold text-ivory mb-1">
+                                        {isConnected ? 'Link Established' : 'Awaiting Connection...'}
                                     </p>
-                                    <p className="text-xs text-gray-400 leading-relaxed">
+                                    <p className="font-body text-xs text-[#7A6A53] leading-relaxed">
                                         {isConnected 
-                                            ? 'AI is analyzing your responses and providing real-time practice feedback.'
+                                            ? 'The system is streaming analytical telemetry and context back to the interviewer.'
                                             : 'Establishing connection to AI services...'
                                         }
                                     </p>
@@ -74,7 +74,7 @@ export const AIAssistanceBadge: React.FC<AIAssistanceBadgeProps> = ({ isConnecte
                             </div>
                             
                             {/* Arrow pointing up */}
-                            <div className="absolute -top-1 right-4 w-2 h-2 bg-gray-900/95 border-l border-t border-white/20 rotate-45" />
+                            <div className="absolute -top-1 right-4 w-2 h-2 bg-panel border-l border-t border-gold/20 rotate-45" />
                         </div>
                     </motion.div>
                 )}

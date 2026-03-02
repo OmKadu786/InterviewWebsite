@@ -209,3 +209,100 @@ Question: "{question}"
     except Exception as e:
         print(f"OpenAI Error (Hint): {e}")
         return "Focus on your relevant experience and how it aligns with the job requirements."
+
+
+async def generate_interview_feedback(transcript: list, scores: dict, candidate_summary: str, job_desc: str) -> dict:
+    """
+    Generate comprehensive feedback based on the full interview transcript and scores.
+    """
+    
+    # Construct a transcript summary for the LLM
+    transcript_text = ""
+    for entry in transcript:
+        role = "Interviewer" if entry["role"] in ["ai", "assistant"] else "Candidate"
+        transcript_text += f"{role}: {entry['content']}\n"
+    
+    system_prompt = f"""You are a senior technical hiring manager. Analyze this interview to provide constructive feedback.
+
+JOB ROLE: {job_desc}
+CANDIDATE SUMMARY: {candidate_summary}
+SCORES: {json.dumps(scores)}
+
+TRANSCRIPT:
+{transcript_text[:15000]}  # Truncate to avoid token limits if necessary
+
+OUTPUT FORMAT:
+Return a JSON object with exactly these keys:
+- strengths: A string describing 2-3 key strengths demonstrated (technical or communication).
+- gaps: A string describing 2-3 specific areas for improvement.
+- advice: A string with actionable advice for their next interview.
+
+Keep each string concise (under 300 characters). Speak directly to the candidate ("You did...")."""
+
+    try:
+        response = await client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "system", "content": system_prompt}],
+            temperature=0.3,
+            max_tokens=400,
+            timeout=20.0,
+            response_format={ "type": "json_object" }
+        )
+        
+        return json.loads(response.choices[0].message.content)
+        
+    except Exception as e:
+        print(f"Feedback Generation Error: {e}")
+        return {
+            "strengths": "Unable to generate specific feedback due to an error.",
+            "gaps": "Please review your transcript manually.",
+            "advice": "Keep practicing!"
+        }
+
+async def generate_study_roadmap(focus_area: str, weak_topics: list) -> dict:
+    """
+    Generate a 7-day study roadmap based on the candidate's weak areas.
+    """
+    topics_str = ", ".join(weak_topics) if weak_topics else focus_area
+    
+    system_prompt = f"""You are a technical mentor creating a personalized study plan.
+    
+    FOCUS AREA: {focus_area}
+    WEAK TOPICS TO IMPROVE: {topics_str}
+    
+    TASK:
+    Generate a strict 7-day study plan to master these gaps.
+    
+    OUTPUT FORMAT:
+    Return a JSON object with keys "day1" through "day7".
+    Each value must be a concise string (under 200 chars) describing the topic and a practice task.
+    
+    Example:
+    {{
+        "day1": "Review Hash Maps: Understand collision resolution. Solve 3 LeetCode easy problems.",
+        "day2": "..."
+    }}"""
+
+    try:
+        response = await client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "system", "content": system_prompt}],
+            temperature=0.2,
+            max_tokens=300,
+            timeout=15.0,
+            response_format={ "type": "json_object" }
+        )
+        
+        return json.loads(response.choices[0].message.content)
+        
+    except Exception as e:
+        print(f"Roadmap Generation Error: {e}")
+        return {
+            "day1": "Review core concepts.",
+            "day2": "Practice basic problems.",
+            "day3": "Deep dive into documentation.",
+            "day4": "Build a small demo project.",
+            "day5": "Review advanced topics.",
+            "day6": "Mock interview practice.",
+            "day7": "Rest and reflection."
+        }
